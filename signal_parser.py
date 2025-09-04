@@ -178,12 +178,28 @@ class SignalParser:
                     normalized['outside_rth'] = True
                     normalized['trading_session'] = 'extended'  # Upgrade to extended session
                     logger.info("Auto-detected outside regular hours: enabling extended hours trading")
+                    
+                    # CRITICAL: Convert market order to limit order for extended hours
+                    if normalized['order_type'] == 'market':
+                        if 'reference_price' in normalized:
+                            normalized['order_type'] = 'limit'
+                            normalized['price'] = normalized['reference_price']
+                            logger.info(f"Converted market order to limit order at ${normalized['reference_price']:.2f} for extended hours trading")
+                        else:
+                            logger.warning("Market order in extended hours requires referencePrice - order may be rejected")
                 else:
                     normalized['outside_rth'] = False
                     logger.info("Auto-detected regular trading hours: standard session")
             else:
                 # For extended, overnight, full sessions, always allow outside RTH
                 normalized['outside_rth'] = normalized['trading_session'] != 'regular'
+                
+                # Also check for market order conversion in explicitly set extended sessions
+                if normalized['trading_session'] in ['extended', 'overnight', 'full'] and normalized['order_type'] == 'market':
+                    if 'reference_price' in normalized:
+                        normalized['order_type'] = 'limit'
+                        normalized['price'] = normalized['reference_price']
+                        logger.info(f"Converted market order to limit order at ${normalized['reference_price']:.2f} for {normalized['trading_session']} session")
         
         return normalized
     
