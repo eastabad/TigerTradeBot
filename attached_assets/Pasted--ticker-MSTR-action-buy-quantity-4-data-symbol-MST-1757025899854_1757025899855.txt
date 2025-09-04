@@ -1,0 +1,57 @@
+{
+    "ticker": "MSTR",
+    "action": "buy",
+    "quantity": 4,
+    "data": {
+        "symbol": "MSTR",
+        "Current_timeframe": "15",
+        "CVDsignal": "cvdAboveMA",
+        "choppiness": "39.3167352107",
+        "adxValue": "29.4505624288",
+        "BBPsignal": "bullpower ",
+        "RSIHAsignal": "BullishHA",
+        "SQZsignal": "no squeeze",
+        "choppingrange_signal": "no chopping",
+        "rsi_state_trend": "Bearish",
+        "center_trend": "Strong Bullish",
+        "adaptive_timeframe_1": "60",
+        "adaptive_timeframe_2": "240",
+        "MAtrend": "1",
+        "MAtrend_timeframe1": "-1",
+        "MAtrend_timeframe2": "-1",
+        "MOMOsignal": "bullishmomo",
+        "Middle_smooth_trend": "Bullish +",
+        "TrendTracersignal": "1",
+        "TrendTracerHTF": "1",
+        "pmaText": "PMA Bullish",
+        "trend_change_volatility_stop": "318.55",
+        "AIbandsignal": "green uptrend",
+        "wavemarket_state": "Long Strong",
+        "HTFwave_signal": "Neutral",
+        "ratingstatus": "Bullish-Strong-OscDriven",
+        "lastSupplyText": "344.5 - 341.31 | 1H",
+        "lastDemandText": "334.61 - 331.3 | 1H",
+        "obData": "Timeframe: 15; Bullish OB: 329.8 - 329.8; Bearish OB: 329.8 - 329.8",
+        "poc_summary": "Daily POC: 326.00; Prev DailyPOC: 329.00; Weekly POC: 341.00; Prev Weekly POC: 342.00; Monthly POC: 341.00; Prev Monthly POC: 336.00",
+        "POCtrend": "0",
+        "ewotrend_state": "Strong Bullish"
+    },
+    "takeProfit": {
+        "limitPrice": 336.29
+    },
+    "stopLoss": {
+        "stopPrice": 325.48
+    },
+    "extras": {
+        "indicator": "X SniperBuy MainTrend AI",
+        "timeframe": "15m",
+        "oscrating": 90,
+        "trendrating": 70,
+        "referencePrice": 329.8,
+        "risk": 1
+    },
+    "poc_summary": "Daily POC: 326.00; Prev DailyPOC: 329.00; Weekly POC: 341.00; Prev Weekly POC: 342.00; Monthly POC: 341.00; Prev Monthly POC: 336.00",
+    "poc_trend": 0,
+    "poc_trend_description": "\u9707\u8361\u533a\u95f4\uff1a\u4ef7\u683c\u5728\u4e0d\u540c\u5468\u671f POC \u4e4b\u95f4\u6ce2\u52a8\uff0c\u591a\u7a7a\u5206\u6b67\uff0c\u89c2\u671b\u4e3a\u4e3b",
+    "analysis_summary": ""
+}
