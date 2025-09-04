@@ -319,13 +319,33 @@ def trade_status(trade_id):
                     db.session.commit()
                     logger.info(f"Trade {trade_id} price updated: {status_update.get('filled_price')}")
     
+    # Return real-time status from Tiger API if available
+    real_time_status = trade.status.value
+    real_time_filled_price = trade.filled_price
+    real_time_filled_quantity = trade.filled_quantity
+    tiger_status_info = 'Database'
+    
+    if trade.tiger_order_id:
+        try:
+            tiger_client_fresh = TigerClient()
+            status_update_fresh = tiger_client_fresh.get_order_status(trade.tiger_order_id)
+            if status_update_fresh['success']:
+                real_time_status = status_update_fresh['status']
+                real_time_filled_price = status_update_fresh.get('filled_price', 0) or trade.filled_price
+                real_time_filled_quantity = status_update_fresh.get('filled_quantity', 0) or trade.filled_quantity
+                tiger_status_info = f"Live: {status_update_fresh.get('tiger_status', 'Unknown')}"
+        except Exception as e:
+            logger.error(f"Error getting fresh status for trade {trade_id}: {str(e)}")
+    
     return jsonify({
         'id': trade.id,
-        'status': trade.status.value,
-        'filled_price': trade.filled_price,
-        'filled_quantity': trade.filled_quantity,
+        'status': real_time_status,
+        'filled_price': real_time_filled_price,
+        'filled_quantity': real_time_filled_quantity,
         'error_message': trade.error_message,
-        'updated_at': trade.updated_at.isoformat()
+        'updated_at': trade.updated_at.isoformat(),
+        'tiger_status_info': tiger_status_info,
+        'is_live_data': trade.tiger_order_id is not None
     })
 
 @app.route('/positions')

@@ -252,14 +252,32 @@ function updateTradeStatus(tradeId) {
                     break;
             }
             
-            statusElement.innerHTML = icon + data.status.toUpperCase();
+            let statusHTML = icon + data.status.toUpperCase();
+            
+            // Add live indicator if data is from Tiger API
+            if (data.is_live_data && data.tiger_status_info.includes('Live:')) {
+                statusHTML += '<br><small class="text-info"><i class="fas fa-sync-alt"></i> Live from Tiger</small>';
+            }
+            
+            statusElement.innerHTML = statusHTML;
             statusElement.className = `badge ${badgeClass}`;
             
+            // Update title with Tiger status info
+            if (data.tiger_status_info) {
+                statusElement.title = `Tiger Status: ${data.tiger_status_info}`;
+            }
+            
             // Update filled price if available
-            if (data.filled_price) {
+            if (data.filled_price && data.filled_price > 0) {
                 const row = document.getElementById(`trade-row-${tradeId}`);
                 const filledPriceCell = row.cells[5]; // Adjust index based on table structure
-                filledPriceCell.innerHTML = `$${parseFloat(data.filled_price).toFixed(2)}`;
+                let priceHTML = `<strong class="text-success">$${parseFloat(data.filled_price).toFixed(2)}</strong>`;
+                
+                if (data.is_live_data) {
+                    priceHTML += '<br><small class="text-muted">Real-time from Tiger</small>';
+                }
+                
+                filledPriceCell.innerHTML = priceHTML;
             }
         })
         .catch(error => {
