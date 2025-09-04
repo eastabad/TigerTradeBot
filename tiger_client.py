@@ -159,7 +159,14 @@ class TigerClient:
                 
                 # Get status from order object - use correct attribute names
                 tiger_status = getattr(order, 'status', 'pending')
-                our_status = status_map.get(tiger_status, 'pending')
+                
+                # Handle both string and enum status
+                if hasattr(tiger_status, 'value'):
+                    tiger_status_str = tiger_status.value  # Get value from enum
+                else:
+                    tiger_status_str = str(tiger_status)   # Convert to string
+                
+                our_status = status_map.get(tiger_status_str, 'pending')
                 
                 return {
                     'success': True,

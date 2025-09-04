@@ -167,20 +167,36 @@ def trade_status(trade_id):
     trade = Trade.query.get_or_404(trade_id)
     
     # Update status from Tiger if order ID exists
-    if trade.tiger_order_id and trade.status == OrderStatus.PENDING:
+    if trade.tiger_order_id:
         tiger_client = TigerClient()
         status_update = tiger_client.get_order_status(trade.tiger_order_id)
         
         if status_update['success']:
-            old_status = trade.status
-            trade.status = OrderStatus(status_update['status'])
-            trade.filled_price = status_update.get('filled_price')
-            trade.filled_quantity = status_update.get('filled_quantity')
-            trade.updated_at = datetime.utcnow()
+            old_status = trade.status.value
+            new_status = status_update['status']
             
-            if old_status != trade.status:
-                db.session.commit()
-                logger.info(f"Trade {trade_id} status updated: {old_status} -> {trade.status}")
+            logger.info(f"Trade {trade_id} status comparison: old='{old_status}', new='{new_status}', tiger_status='{status_update.get('tiger_status')}'")
+            logger.info(f"Status update data: {status_update}")
+            
+            # Map status if it changed
+            if old_status != new_status:
+                try:
+                    trade.status = OrderStatus(new_status)
+                    trade.filled_price = status_update.get('filled_price')
+                    trade.filled_quantity = status_update.get('filled_quantity') 
+                    trade.updated_at = datetime.utcnow()
+                    
+                    db.session.commit()
+                    logger.info(f"Trade {trade_id} status updated: {old_status} -> {new_status}")
+                except ValueError as e:
+                    logger.error(f"Unknown status from Tiger: {new_status}, error: {e}")
+            else:
+                # Still update prices even if status same
+                trade.filled_price = status_update.get('filled_price')
+                trade.filled_quantity = status_update.get('filled_quantity')
+                if status_update.get('filled_price'):
+                    db.session.commit()
+                    logger.info(f"Trade {trade_id} price updated: {status_update.get('filled_price')}")
     
     return jsonify({
         'id': trade.id,
