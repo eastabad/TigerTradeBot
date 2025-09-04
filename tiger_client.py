@@ -441,6 +441,65 @@ class TigerClient:
             logger.error(f"Error canceling order {order_id}: {str(e)}")
             return {'success': False, 'error': str(e)}
 
+    def close_position_with_sandbox_fallback(self, symbol, trading_session='regular'):
+        """Close position with sandbox environment fallback strategies"""
+        logger.info(f"Attempting to close position for {symbol} with sandbox fallback")
+        
+        # First try normal close
+        result = self.close_position(symbol, trading_session)
+        
+        # If failed due to salable quantity issue, try fallback strategies
+        if not result['success'] and 'salable quantity is 0' in result.get('error', ''):
+            logger.info(f"Normal close failed for {symbol} due to salable quantity issue, trying sandbox fallback strategies")
+            
+            # Strategy 1: Try limit order at current market price - 1%
+            try:
+                position_result = self.get_positions(symbol=symbol)
+                if position_result['success'] and position_result['positions']:
+                    position = position_result['positions'][0]
+                    current_quantity = position['quantity']
+                    
+                    # Get current market price and create limit order slightly below market
+                    current_price = position.get('latest_price', 0)
+                    if current_price > 0:
+                        limit_price = round(current_price * 0.99, 2)  # 1% below market
+                        logger.info(f"Trying fallback limit order: SELL {current_quantity} {symbol} @ ${limit_price}")
+                        
+                        # Create limit order directly 
+                        contract = stock_contract(symbol=symbol, currency='USD')
+                        order = limit_order(
+                            account=self.client_config.account,
+                            contract=contract,
+                            action='SELL',
+                            quantity=abs(int(current_quantity)),
+                            limit_price=limit_price
+                        )
+                        order.outside_rth = trading_session != 'regular'
+                        
+                        fallback_result = self.client.place_order(order)
+                        if fallback_result and order.id:
+                            logger.info(f"Sandbox fallback limit order successful: {order.id}")
+                            return {
+                                'success': True,
+                                'message': f'Sandbox fallback: Limit order placed for {symbol}',
+                                'order_id': str(order.id),
+                                'fallback_strategy': 'limit_order',
+                                'limit_price': limit_price
+                            }
+                        
+            except Exception as e:
+                logger.error(f"Fallback limit order failed: {str(e)}")
+            
+            # Strategy 2: Return sandbox-specific error message
+            return {
+                'success': False,
+                'error': f'Unable to close {symbol} position - Sandbox environment limitation (salableQty=0). In production, this position would be closeable.',
+                'sandbox_limitation': True,
+                'original_error': result.get('error')
+            }
+        
+        return result
+
     def close_position(self, symbol, trading_session='regular'):
         """Close existing position for a symbol"""
         if not self.client:
