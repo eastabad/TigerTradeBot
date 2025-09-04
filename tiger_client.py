@@ -1,11 +1,12 @@
 import os
 import logging
 from datetime import datetime
-from tigeropen.tiger_open_config import get_client_config
+from tigeropen.tiger_open_config import TigerOpenClientConfig
 from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.util.contract_utils import stock_contract
 from tigeropen.common.util.order_utils import market_order, limit_order
-from tigeropen.common.consts import Market, Currency
+from tigeropen.common.consts import Language, Market, Currency
+from tigeropen.common.util.signature_utils import read_private_key
 from models import OrderType, Side
 from config import get_config
 
@@ -20,20 +21,47 @@ class TigerClient:
     def _initialize_client(self):
         """Initialize Tiger OpenAPI client using config file"""
         try:
-            # Use TigerOpenClientConfig with props_path pointing to current directory
-            from tigeropen.tiger_open_config import TigerOpenClientConfig
+            # Create client config
+            self.client_config = TigerOpenClientConfig()
             
-            # Initialize client config using the config file in current directory
-            self.client_config = TigerOpenClientConfig(props_path='./')
+            # Read configuration from tiger_openapi_config.properties
+            config_path = './tiger_openapi_config.properties'
+            if os.path.exists(config_path):
+                config_data = {}
+                with open(config_path, 'r') as f:
+                    for line in f:
+                        if '=' in line and not line.strip().startswith('#'):
+                            key, value = line.strip().split('=', 1)
+                            config_data[key] = value
+                
+                # Set configuration from file
+                self.client_config.tiger_id = config_data.get('tiger_id')
+                self.client_config.account = config_data.get('account')
+                
+                # Set private key - use pk8 format
+                private_key_pk8 = config_data.get('private_key_pk8')
+                if private_key_pk8:
+                    self.client_config.private_key = private_key_pk8
+                
+                # Set other config
+                self.client_config.language = Language.zh_CN
+                
+                logger.info(f"Config loaded - Tiger ID: {self.client_config.tiger_id}, Account: {self.client_config.account}")
+                
+            else:
+                logger.error("Config file not found")
+                return
             
             # Override account if set in database config
             account_override = get_config('TIGER_ACCOUNT')
             if account_override:
                 self.client_config.account = account_override
+                logger.info(f"Account overridden to: {account_override}")
             
-            # Set additional configuration
-            self.client_config.language = 'zh_CN'
-            self.client_config.timeout = 15
+            # Validate required fields
+            if not all([self.client_config.tiger_id, self.client_config.private_key, self.client_config.account]):
+                logger.error(f"Missing required config: tiger_id={bool(self.client_config.tiger_id)}, private_key={bool(self.client_config.private_key)}, account={bool(self.client_config.account)}")
+                return
             
             # Initialize trade client
             self.client = TradeClient(self.client_config)
@@ -61,18 +89,8 @@ class TigerClient:
                     'error': 'Trading is currently disabled'
                 }
             
-            # Check if account is configured
-            if not self.client_config.account:
-                return {
-                    'success': False,
-                    'error': 'Trading account not configured'
-                }
-            
             # Create contract
-            contract = stock_contract(
-                symbol=trade.symbol,
-                currency=Currency.USD.value
-            )
+            contract = stock_contract(symbol=trade.symbol, currency='USD')
             
             # Create order based on type
             if trade.order_type == OrderType.MARKET:
@@ -92,17 +110,17 @@ class TigerClient:
                 )
             
             # Place order
-            response = self.client.place_order(order)
+            result = self.client.place_order(order)
             
-            if response:
-                order_id = str(response)
+            if result and order.id:
+                order_id = str(order.id)
                 logger.info(f"Order placed successfully: {order_id}")
                 return {
                     'success': True,
                     'order_id': order_id
                 }
             else:
-                logger.error("Order placement failed: No response")
+                logger.error("Order placement failed")
                 return {
                     'success': False,
                     'error': 'Order placement failed'
