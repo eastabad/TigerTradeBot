@@ -1,7 +1,7 @@
 import os
 import logging
 from datetime import datetime
-from tigeropen.tiger_open_config import TigerOpenClientConfig, get_client_config
+from tigeropen.tiger_open_config import get_client_config
 from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.util.contract_utils import stock_contract
 from tigeropen.common.util.order_utils import market_order, limit_order
@@ -18,33 +18,50 @@ class TigerClient:
         self._initialize_client()
     
     def _initialize_client(self):
-        """Initialize Tiger OpenAPI client"""
+        """Initialize Tiger OpenAPI client using config file"""
         try:
-            # Get credentials from config or environment
-            tiger_id = get_config('TIGER_API_KEY') or os.getenv('TIGER_API_KEY')
-            private_key = get_config('TIGER_SECRET_KEY') or os.getenv('TIGER_SECRET_KEY')
-            account = get_config('TIGER_ACCOUNT') or os.getenv('TIGER_ACCOUNT')
+            # Try to use config file first
+            config_path = './tiger_openapi_config.properties'
             
-            if not all([tiger_id, private_key, account]):
-                logger.error("Missing Tiger API credentials")
-                return
-            
-            # Create client config
-            self.client_config = TigerOpenClientConfig(
-                tiger_id=tiger_id,
-                private_key=private_key,
-                account=account,
-                standard_account=account
-            )
-            
-            # Initialize trade client
-            self.client = TradeClient(self.client_config)
-            
-            logger.info("Tiger client initialized successfully")
-            
+            if os.path.exists(config_path):
+                # Use config file
+                self.client_config = get_client_config(config_path)
+                
+                # Override account if set in database config
+                account = get_config('TIGER_ACCOUNT')
+                if account:
+                    self.client_config.account = account
+                    self.client_config.standard_account = account
+                
+                self.client = TradeClient(self.client_config)
+                logger.info("Tiger client initialized with config file")
+                
+            else:
+                # Fallback to manual configuration
+                tiger_id = get_config('TIGER_API_KEY') or os.getenv('TIGER_API_KEY')
+                private_key = get_config('TIGER_SECRET_KEY') or os.getenv('TIGER_SECRET_KEY')
+                account = get_config('TIGER_ACCOUNT') or os.getenv('TIGER_ACCOUNT')
+                
+                if not all([tiger_id, private_key, account]):
+                    logger.error("Missing Tiger API credentials and no config file found")
+                    return
+                
+                # Manual configuration (fallback)
+                from tigeropen.tiger_open_config import TigerOpenClientConfig
+                self.client_config = TigerOpenClientConfig(
+                    tiger_id=tiger_id,
+                    private_key=private_key,
+                    account=account,
+                    standard_account=account
+                )
+                
+                self.client = TradeClient(self.client_config)
+                logger.info("Tiger client initialized with manual config")
+                
         except Exception as e:
             logger.error(f"Failed to initialize Tiger client: {str(e)}")
             self.client = None
+            self.client_config = None
     
     def place_order(self, trade):
         """Place an order through Tiger API"""
@@ -60,6 +77,13 @@ class TigerClient:
                 return {
                     'success': False,
                     'error': 'Trading is currently disabled'
+                }
+            
+            # Check if account is configured
+            if not self.client_config.account:
+                return {
+                    'success': False,
+                    'error': 'Trading account not configured'
                 }
             
             # Create contract
@@ -163,7 +187,7 @@ class TigerClient:
         try:
             # Try to get accounts
             accounts = self.client.get_accounts()
-            return accounts is not None
+            return accounts is not None and len(accounts) > 0
         except Exception as e:
             logger.error(f"Connection test failed: {str(e)}")
             return False
