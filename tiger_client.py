@@ -5,7 +5,7 @@ from tigeropen.tiger_open_config import TigerOpenClientConfig
 from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.util.contract_utils import stock_contract
 from tigeropen.common.util.order_utils import market_order, limit_order, limit_order_with_legs, order_leg
-from tigeropen.common.consts import Language, Market, Currency
+from tigeropen.common.consts import Language, Market, Currency, TradingSessionType
 from tigeropen.common.util.signature_utils import read_private_key
 from models import OrderType, Side
 from config import get_config
@@ -93,6 +93,19 @@ class TigerClient:
             contract = stock_contract(symbol=trade.symbol, currency='USD')
             action = 'BUY' if trade.side == Side.BUY else 'SELL'
             
+            # Determine trading session type
+            session_map = {
+                'regular': None,  # Default - no special session type needed
+                'extended': None,  # Extended hours handled by outside_rth flag
+                'overnight': TradingSessionType.OVERNIGHT,
+                'full': TradingSessionType.FULL
+            }
+            
+            trading_session_type = session_map.get(trade.trading_session)
+            outside_rth = getattr(trade, 'outside_rth', False)
+            
+            logger.info(f"Trading session: {trade.trading_session}, outside_rth: {outside_rth}")
+            
             # Check if we have stop loss or take profit
             has_stop_loss = trade.stop_loss_price is not None
             has_take_profit = trade.take_profit_price is not None
@@ -120,7 +133,7 @@ class TigerClient:
                         'LOSS', 
                         trade.stop_loss_price,
                         time_in_force='GTC',
-                        outside_rth=False
+                        outside_rth=outside_rth
                     )
                     order_legs.append(stop_loss_leg)
                     logger.info(f"Adding stop loss at {trade.stop_loss_price}")
@@ -131,7 +144,7 @@ class TigerClient:
                         'PROFIT',
                         trade.take_profit_price,
                         time_in_force='GTC', 
-                        outside_rth=False
+                        outside_rth=outside_rth
                     )
                     order_legs.append(take_profit_leg)
                     logger.info(f"Adding take profit at {trade.take_profit_price}")
@@ -145,6 +158,11 @@ class TigerClient:
                     limit_price=trade.price,
                     order_legs=order_legs
                 )
+                
+                # Set trading session type and outside_rth
+                if trading_session_type:
+                    order.trading_session_type = trading_session_type
+                order.outside_rth = outside_rth
                 
             else:
                 # Standard order without attachments
@@ -163,6 +181,11 @@ class TigerClient:
                         limit_price=trade.price,
                         quantity=int(trade.quantity)
                     )
+                
+                # Set trading session type and outside_rth for standard orders
+                if trading_session_type:
+                    order.trading_session_type = trading_session_type
+                order.outside_rth = outside_rth
             
             # Place order
             result = self.client.place_order(order)

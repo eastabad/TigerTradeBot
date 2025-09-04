@@ -74,6 +74,10 @@ def webhook():
             trade.stop_loss_price = parsed_signal.get('stop_loss')
             trade.take_profit_price = parsed_signal.get('take_profit')
             
+            # Add trading session settings
+            trade.trading_session = parsed_signal.get('trading_session', 'regular')
+            trade.outside_rth = parsed_signal.get('outside_rth', False)
+            
             db.session.add(trade)
             db.session.flush()  # Get the ID
             

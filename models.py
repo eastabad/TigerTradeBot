@@ -41,6 +41,10 @@ class Trade(db.Model):
     # Child orders (for stop loss and take profit)
     stop_loss_order_id = db.Column(db.String(50), nullable=True)
     take_profit_order_id = db.Column(db.String(50), nullable=True)
+    
+    # Trading session settings
+    trading_session = db.Column(db.String(20), nullable=True, default='regular')  # regular, extended, overnight, full
+    outside_rth = db.Column(db.Boolean, nullable=True, default=False)  # Outside regular trading hours
 
 class TradingConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -91,6 +91,26 @@ class SignalParser:
         if 'take_profit' in signal_data:
             normalized['take_profit'] = float(signal_data['take_profit'])
         
+        # Trading session type (交易时段)
+        session_type = signal_data.get('trading_session', signal_data.get('session', 'regular')).lower()
+        if session_type in ['regular', 'rth']:
+            normalized['trading_session'] = 'regular'
+        elif session_type in ['extended', 'extended_hours']:
+            normalized['trading_session'] = 'extended'  
+        elif session_type in ['overnight', 'night']:
+            normalized['trading_session'] = 'overnight'
+        elif session_type in ['full', 'full_time', '24h']:
+            normalized['trading_session'] = 'full'
+        else:
+            normalized['trading_session'] = 'regular'  # Default
+        
+        # Outside regular trading hours flag
+        if 'outside_rth' in signal_data:
+            normalized['outside_rth'] = bool(signal_data['outside_rth'])
+        else:
+            # Auto-determine based on session type
+            normalized['outside_rth'] = normalized['trading_session'] != 'regular'
+        
         return normalized
     
     def _validate_signal(self, signal: Dict[str, Any]) -> None:
@@ -126,6 +146,10 @@ class SignalParser:
         # Default time in force
         if 'time_in_force' not in signal:
             signal['time_in_force'] = 'day'
+        
+        # Trading session type (交易时段)
+        if 'trading_session' not in signal:
+            signal['trading_session'] = 'regular'  # regular, extended, overnight, full
         
         return signal
     
