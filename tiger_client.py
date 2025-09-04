@@ -4,7 +4,7 @@ from datetime import datetime
 from tigeropen.tiger_open_config import TigerOpenClientConfig
 from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.util.contract_utils import stock_contract
-from tigeropen.common.util.order_utils import market_order, limit_order
+from tigeropen.common.util.order_utils import market_order, limit_order, limit_order_with_legs, order_leg
 from tigeropen.common.consts import Language, Market, Currency
 from tigeropen.common.util.signature_utils import read_private_key
 from models import OrderType, Side
@@ -74,7 +74,7 @@ class TigerClient:
             self.client_config = None
     
     def place_order(self, trade):
-        """Place an order through Tiger API"""
+        """Place an order through Tiger API with optional stop loss and take profit"""
         if not self.client or not self.client_config:
             return {
                 'success': False,
@@ -91,23 +91,78 @@ class TigerClient:
             
             # Create contract
             contract = stock_contract(symbol=trade.symbol, currency='USD')
+            action = 'BUY' if trade.side == Side.BUY else 'SELL'
             
-            # Create order based on type
-            if trade.order_type == OrderType.MARKET:
-                order = market_order(
+            # Check if we have stop loss or take profit
+            has_stop_loss = trade.stop_loss_price is not None
+            has_take_profit = trade.take_profit_price is not None
+            
+            order = None
+            
+            # Create order with or without attached orders (止损止盈)
+            if has_stop_loss or has_take_profit:
+                # Use limit order for orders with attached orders (market orders don't support attachments)
+                if trade.order_type == OrderType.MARKET:
+                    # For market orders with attachments, we need to use limit order at a reasonable price
+                    # This is a limitation - attachments only work with limit orders
+                    logger.warning("Market orders don't support attachments, converting to limit order")
+                    return {
+                        'success': False,
+                        'error': 'Market orders with stop loss/take profit not supported. Use limit orders.'
+                    }
+                
+                # Create order legs for stop loss and take profit
+                order_legs = []
+                
+                if has_stop_loss:
+                    # Stop loss order leg
+                    stop_loss_leg = order_leg(
+                        'LOSS', 
+                        trade.stop_loss_price,
+                        time_in_force='GTC',
+                        outside_rth=False
+                    )
+                    order_legs.append(stop_loss_leg)
+                    logger.info(f"Adding stop loss at {trade.stop_loss_price}")
+                
+                if has_take_profit:
+                    # Take profit order leg  
+                    take_profit_leg = order_leg(
+                        'PROFIT',
+                        trade.take_profit_price,
+                        time_in_force='GTC', 
+                        outside_rth=False
+                    )
+                    order_legs.append(take_profit_leg)
+                    logger.info(f"Adding take profit at {trade.take_profit_price}")
+                
+                # Create limit order with legs
+                order = limit_order_with_legs(
                     account=self.client_config.account,
                     contract=contract,
-                    action='BUY' if trade.side == Side.BUY else 'SELL',
-                    quantity=int(trade.quantity)
-                )
-            else:
-                order = limit_order(
-                    account=self.client_config.account,
-                    contract=contract,
-                    action='BUY' if trade.side == Side.BUY else 'SELL',
+                    action=action,
+                    quantity=int(trade.quantity),
                     limit_price=trade.price,
-                    quantity=int(trade.quantity)
+                    order_legs=order_legs
                 )
+                
+            else:
+                # Standard order without attachments
+                if trade.order_type == OrderType.MARKET:
+                    order = market_order(
+                        account=self.client_config.account,
+                        contract=contract,
+                        action=action,
+                        quantity=int(trade.quantity)
+                    )
+                else:
+                    order = limit_order(
+                        account=self.client_config.account,
+                        contract=contract,
+                        action=action,
+                        limit_price=trade.price,
+                        quantity=int(trade.quantity)
+                    )
             
             # Place order
             result = self.client.place_order(order)
@@ -115,10 +170,37 @@ class TigerClient:
             if result and order.id:
                 order_id = str(order.id)
                 logger.info(f"Order placed successfully: {order_id}")
-                return {
+                
+                response = {
                     'success': True,
                     'order_id': order_id
                 }
+                
+                # If we have attached orders, get their IDs
+                if has_stop_loss or has_take_profit:
+                    try:
+                        # Get attached orders
+                        attached_orders = self.client.get_open_orders(
+                            account=self.client_config.account,
+                            parent_id=order.id
+                        )
+                        
+                        if attached_orders:
+                            for attached_order in attached_orders:
+                                # Identify stop loss and take profit orders by their type
+                                if hasattr(attached_order, 'order_type'):
+                                    if 'LOSS' in str(attached_order.order_type):
+                                        response['stop_loss_order_id'] = str(attached_order.id)
+                                    elif 'PROFIT' in str(attached_order.order_type):
+                                        response['take_profit_order_id'] = str(attached_order.id)
+                                        
+                        logger.info(f"Attached orders created: {len(attached_orders) if attached_orders else 0}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Could not get attached order IDs: {str(e)}")
+                
+                return response
+                
             else:
                 logger.error("Order placement failed")
                 return {

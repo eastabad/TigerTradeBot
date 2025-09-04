@@ -70,6 +70,10 @@ def webhook():
             trade.order_type = OrderType(parsed_signal.get('order_type', 'market').lower())
             trade.signal_data = raw_data
             
+            # Add stop loss and take profit
+            trade.stop_loss_price = parsed_signal.get('stop_loss')
+            trade.take_profit_price = parsed_signal.get('take_profit')
+            
             db.session.add(trade)
             db.session.flush()  # Get the ID
             
@@ -83,6 +87,16 @@ def webhook():
             if result['success']:
                 trade.tiger_order_id = result['order_id']
                 trade.status = OrderStatus.PENDING
+                
+                # Save attached order IDs if present
+                if 'stop_loss_order_id' in result:
+                    trade.stop_loss_order_id = result['stop_loss_order_id']
+                    logger.info(f"Stop loss order created: {result['stop_loss_order_id']}")
+                
+                if 'take_profit_order_id' in result:
+                    trade.take_profit_order_id = result['take_profit_order_id']
+                    logger.info(f"Take profit order created: {result['take_profit_order_id']}")
+                
                 logger.info(f"Order placed successfully: {result['order_id']}")
             else:
                 trade.status = OrderStatus.REJECTED

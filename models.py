@@ -33,6 +33,14 @@ class Trade(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     filled_price = db.Column(db.Float, nullable=True)
     filled_quantity = db.Column(db.Float, nullable=True)
+    
+    # Stop loss and take profit prices
+    stop_loss_price = db.Column(db.Float, nullable=True)
+    take_profit_price = db.Column(db.Float, nullable=True)
+    
+    # Child orders (for stop loss and take profit)
+    stop_loss_order_id = db.Column(db.String(50), nullable=True)
+    take_profit_order_id = db.Column(db.String(50), nullable=True)
 
 class TradingConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)

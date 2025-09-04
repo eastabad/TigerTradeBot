@@ -74,6 +74,23 @@ class SignalParser:
         else:
             normalized['order_type'] = 'market'  # Default
         
+        # Stop loss and take profit
+        if 'stopLoss' in signal_data and signal_data['stopLoss']:
+            stop_loss_data = signal_data['stopLoss']
+            if 'stopPrice' in stop_loss_data:
+                normalized['stop_loss'] = float(stop_loss_data['stopPrice'])
+        
+        if 'takeProfit' in signal_data and signal_data['takeProfit']:
+            take_profit_data = signal_data['takeProfit']
+            if 'limitPrice' in take_profit_data:
+                normalized['take_profit'] = float(take_profit_data['limitPrice'])
+        
+        # Alternative formats for stop loss/take profit
+        if 'stop_loss' in signal_data:
+            normalized['stop_loss'] = float(signal_data['stop_loss'])
+        if 'take_profit' in signal_data:
+            normalized['take_profit'] = float(signal_data['take_profit'])
+        
         return normalized
     
     def _validate_signal(self, signal: Dict[str, Any]) -> None:
