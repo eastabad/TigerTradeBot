@@ -467,7 +467,8 @@ class TigerClient:
             result = self.client.cancel_order(id=order_id)
             logger.info(f"Cancel order {order_id} result: {result}")
             
-            if result and len(result) > 0:
+            # Tiger API returns the order ID as confirmation of successful cancellation
+            if result:
                 return {'success': True, 'result': result}
             else:
                 return {'success': False, 'error': 'Cancel request failed'}

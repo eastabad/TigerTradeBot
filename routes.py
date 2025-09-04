@@ -504,3 +504,37 @@ def debug_orders(symbol):
     except Exception as e:
         logger.error(f"Error debugging orders for {symbol}: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cancel-orders/<symbol>', methods=['POST'])
+def cancel_orders_for_symbol(symbol):
+    """Cancel all open orders for a symbol"""
+    try:
+        tiger_client = TigerClient()
+        if not tiger_client:
+            return jsonify({'error': 'Tiger client not available'}), 500
+        
+        logger.info(f"Attempting to cancel all orders for {symbol}")
+        result = tiger_client.force_cancel_all_orders_for_symbol(symbol)
+        
+        if result['success']:
+            canceled_count = result.get('canceled_count', 0)
+            total_orders = result.get('total_orders', 0)
+            errors = result.get('errors', [])
+            
+            logger.info(f"Successfully canceled {canceled_count} out of {total_orders} orders for {symbol}")
+            
+            return jsonify({
+                'success': True,
+                'symbol': symbol,
+                'canceled_count': canceled_count,
+                'total_orders': total_orders,
+                'errors': errors,
+                'message': f"Canceled {canceled_count} out of {total_orders} orders for {symbol}"
+            })
+        else:
+            logger.error(f"Failed to cancel orders for {symbol}: {result['error']}")
+            return jsonify({'error': result['error']}), 500
+    
+    except Exception as e:
+        logger.error(f"Error canceling orders for {symbol}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
