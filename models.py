@@ -45,6 +45,9 @@ class Trade(db.Model):
     # Trading session settings
     trading_session = db.Column(db.String(20), nullable=True, default='regular')  # regular, extended, overnight, full
     outside_rth = db.Column(db.Boolean, nullable=True, default=False)  # Outside regular trading hours
+    
+    # Close position flag
+    is_close_position = db.Column(db.Boolean, nullable=True, default=False)  # True for close/flat signals
 
 class TradingConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -7,6 +7,7 @@ from models import Trade, TradingConfig, SignalLog, OrderStatus, OrderType, Side
 from tiger_client import TigerClient
 from signal_parser import SignalParser
 from config import get_config, set_config
+from discord_notifier import discord_notifier
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ def webhook():
                     trade.status = OrderStatus.PENDING
                     trade.trading_session = trading_session
                     trade.outside_rth = parsed_signal.get('outside_rth', trading_session != 'regular')
+                    trade.is_close_position = True  # Mark as close position
                     
                     db.session.add(trade)
                     db.session.flush()
@@ -201,7 +203,7 @@ def config():
         try:
             # Update configurations
             for key in ['TIGER_API_KEY', 'TIGER_SECRET_KEY', 'TIGER_ACCOUNT', 
-                       'MAX_TRADE_AMOUNT', 'TRADING_ENABLED']:
+                       'MAX_TRADE_AMOUNT', 'TRADING_ENABLED', 'DISCORD_WEBHOOK_URL']:
                 value = request.form.get(key, '')
                 if value:
                     set_config(key, value)
@@ -218,7 +220,8 @@ def config():
         'TIGER_SECRET_KEY': get_config('TIGER_SECRET_KEY', ''),
         'TIGER_ACCOUNT': get_config('TIGER_ACCOUNT', ''),
         'MAX_TRADE_AMOUNT': get_config('MAX_TRADE_AMOUNT', '10000'),
-        'TRADING_ENABLED': get_config('TRADING_ENABLED', 'true')
+        'TRADING_ENABLED': get_config('TRADING_ENABLED', 'true'),
+        'DISCORD_WEBHOOK_URL': get_config('DISCORD_WEBHOOK_URL', '')
     }
     
     return render_template('config.html', configs=configs)
@@ -250,6 +253,14 @@ def trade_status(trade_id):
                     
                     db.session.commit()
                     logger.info(f"Trade {trade_id} status updated: {old_status} -> {new_status}")
+                    
+                    # Send Discord notification for significant status changes
+                    if new_status in ['filled', 'partially_filled']:
+                        # Use the is_close_position flag to determine if this is a close trade
+                        is_close_trade = getattr(trade, 'is_close_position', False)
+                        
+                        discord_notifier.send_order_notification(trade, new_status, is_close=is_close_trade)
+                    
                 except ValueError as e:
                     logger.error(f"Unknown status from Tiger: {new_status}, error: {e}")
             else:
