@@ -199,7 +199,8 @@ class DiscordNotifier:
             'PLTR': 'Palantir',
             'AMD': '超微半导体',
             'COIN': 'Coinbase',
-            'SHOP': 'Shopify'
+            'SHOP': 'Shopify',
+            'MSTR': 'MicroStrategy'
         }
         
         return name_map.get(symbol, symbol)
