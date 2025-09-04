@@ -104,12 +104,20 @@ class DiscordNotifier:
             if is_close:
                 if status == 'filled':
                     content = f"🔸 **平仓完成**\n股票: {symbol_name} ({trade.symbol})\n数量: {trade.quantity}股\n结果: **完全成交**"
-                    tts_content = f"{symbol_name}平仓{int(trade.quantity)}股完全成交"
+                    if trade.filled_price:
+                        content += f"\n成交价: ${trade.filled_price:.2f}"
+                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股完全成交{trade.filled_price:.2f}美元"
+                    else:
+                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股完全成交"
                     color = 0xff9500  # 橙色
                 elif status == 'partially_filled':
                     filled_qty = getattr(trade, 'filled_quantity', 0) or 0
                     content = f"🔸 **平仓进行中**\n股票: {symbol_name} ({trade.symbol})\n数量: {trade.quantity}股\n结果: **部分成交** ({filled_qty}股)"
-                    tts_content = f"{symbol_name}平仓{int(trade.quantity)}股部分成交{int(filled_qty)}股"
+                    if trade.filled_price:
+                        content += f"\n成交价: ${trade.filled_price:.2f}"
+                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股部分成交{int(filled_qty)}股{trade.filled_price:.2f}美元"
+                    else:
+                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股部分成交{int(filled_qty)}股"
                     color = 0xffff00  # 黄色
                 else:
                     content = f"🔸 **平仓状态**\n股票: {symbol_name} ({trade.symbol})\n数量: {trade.quantity}股\n结果: {status}"

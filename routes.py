@@ -88,10 +88,57 @@ def webhook():
                     signal_log.parsed_successfully = True
                     signal_log.trade_id = trade.id
                     logger.info(f"Close position order placed: {result['order_id']}")
+                    
+                    # Get real-time order status from Tiger API for close position
+                    try:
+                        import time
+                        time.sleep(1)  # Brief wait for order processing
+                        
+                        status_result = tiger_client.get_order_status(trade.tiger_order_id)
+                        if status_result['success']:
+                            # Update trade with real Tiger API data - map Tiger status to our enum
+                            tiger_status = status_result['status']
+                            if tiger_status == 'filled':
+                                trade.status = OrderStatus.FILLED
+                            elif tiger_status == 'pending':
+                                trade.status = OrderStatus.PENDING
+                            elif tiger_status == 'cancelled':
+                                trade.status = OrderStatus.CANCELLED
+                            elif tiger_status == 'rejected':
+                                trade.status = OrderStatus.REJECTED
+                            else:
+                                trade.status = OrderStatus.PENDING  # Default fallback
+                            if status_result['filled_price'] > 0:
+                                trade.price = status_result['filled_price']
+                                trade.filled_price = status_result['filled_price']
+                            trade.filled_quantity = status_result.get('filled_quantity', 0)
+                            
+                            # Send Discord notification with real Tiger data for close position
+                            discord_status = status_result['status']
+                            discord_notifier.send_order_notification(trade, discord_status, is_close=True)
+                            
+                            logger.info(f"Close position Discord notification sent with real Tiger data: {discord_status}, price: {status_result.get('filled_price', 0)}")
+                        else:
+                            # Fallback to pending status if can't get real-time data
+                            discord_notifier.send_order_notification(trade, 'pending', is_close=True)
+                    except Exception as e:
+                        logger.error(f"Failed to get real-time status or send Discord notification for close position: {str(e)}")
+                        # Fallback notification
+                        try:
+                            discord_notifier.send_order_notification(trade, 'pending', is_close=True)
+                        except Exception as e2:
+                            logger.error(f"Fallback Discord notification for close position also failed: {str(e2)}")
                 else:
                     logger.error(f"Failed to close position: {result['error']}")
                     signal_log.error_message = result['error']
                     result['success'] = False
+                    
+                    # Send Discord notification for failed close position
+                    if 'trade' in locals():
+                        try:
+                            discord_notifier.send_order_notification(trade, 'rejected', is_close=True)
+                        except Exception as e:
+                            logger.error(f"Failed to send Discord notification for failed close position: {str(e)}")
                 
             else:
                 # Regular trade signal processing
