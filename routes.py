@@ -199,7 +199,7 @@ def webhook():
 
 @app.route('/trades')
 def trades():
-    """View all trades"""
+    """View all trades with real-time status from Tiger API"""
     page = request.args.get('page', 1, type=int)
     per_page = 20
     
@@ -207,6 +207,36 @@ def trades():
     trades_pagination = trades_query.paginate(
         page=page, per_page=per_page, error_out=False
     )
+    
+    # Get real-time status for each trade with Tiger order ID
+    tiger_client = TigerClient()
+    for trade in trades_pagination.items:
+        if trade.tiger_order_id:
+            try:
+                status_update = tiger_client.get_order_status(trade.tiger_order_id)
+                if status_update['success']:
+                    # Update real-time status and price data
+                    trade.real_time_status = status_update['status']
+                    trade.real_time_filled_price = status_update.get('filled_price', 0)
+                    trade.real_time_filled_quantity = status_update.get('filled_quantity', 0)
+                    trade.tiger_status_info = status_update.get('tiger_status', '')
+                else:
+                    trade.real_time_status = trade.status.value
+                    trade.real_time_filled_price = trade.filled_price
+                    trade.real_time_filled_quantity = trade.filled_quantity
+                    trade.tiger_status_info = 'Error fetching'
+            except Exception as e:
+                logger.error(f"Error getting real-time status for trade {trade.id}: {str(e)}")
+                trade.real_time_status = trade.status.value
+                trade.real_time_filled_price = trade.filled_price
+                trade.real_time_filled_quantity = trade.filled_quantity
+                trade.tiger_status_info = 'Error'
+        else:
+            # No Tiger order ID, use database values
+            trade.real_time_status = trade.status.value
+            trade.real_time_filled_price = trade.filled_price
+            trade.real_time_filled_quantity = trade.filled_quantity
+            trade.tiger_status_info = 'No Tiger Order ID'
     
     return render_template('trades.html', 
                          trades=trades_pagination.items,

@@ -62,8 +62,12 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if trade.filled_price %}
+                                        {% if trade.real_time_filled_price and trade.real_time_filled_price > 0 %}
+                                            <strong class="text-success">${{ "%.2f"|format(trade.real_time_filled_price) }}</strong>
+                                            <br><small class="text-muted">Real-time from Tiger</small>
+                                        {% elif trade.filled_price %}
                                             ${{ "%.2f"|format(trade.filled_price) }}
+                                            <br><small class="text-muted">Database</small>
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}
@@ -74,19 +78,25 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-{% if trade.status.value == 'filled' %}success{% elif trade.status.value == 'pending' %}warning{% elif trade.status.value == 'rejected' %}danger{% elif trade.status.value == 'cancelled' %}secondary{% else %}info{% endif %}" 
-                                              id="status-{{ trade.id }}">
-                                            {% if trade.status.value == 'filled' %}
+                                        <span class="badge bg-{% if trade.real_time_status == 'filled' %}success{% elif trade.real_time_status == 'pending' %}warning{% elif trade.real_time_status == 'rejected' %}danger{% elif trade.real_time_status == 'cancelled' %}secondary{% else %}info{% endif %}" 
+                                              id="status-{{ trade.id }}"
+                                              title="Tiger Status: {{ trade.tiger_status_info }}">
+                                            {% if trade.real_time_status == 'filled' %}
                                                 <i class="fas fa-check me-1"></i>
-                                            {% elif trade.status.value == 'pending' %}
+                                            {% elif trade.real_time_status == 'pending' %}
                                                 <i class="fas fa-clock me-1"></i>
-                                            {% elif trade.status.value == 'rejected' %}
+                                            {% elif trade.real_time_status == 'rejected' %}
                                                 <i class="fas fa-times me-1"></i>
-                                            {% elif trade.status.value == 'cancelled' %}
+                                            {% elif trade.real_time_status == 'cancelled' %}
                                                 <i class="fas fa-ban me-1"></i>
                                             {% endif %}
-                                            {{ trade.status.value.upper() }}
+                                            {{ trade.real_time_status.upper() }}
                                         </span>
+                                        {% if trade.real_time_status != trade.status.value %}
+                                            <br><small class="text-info">
+                                                <i class="fas fa-sync-alt"></i> Live from Tiger
+                                            </small>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if trade.tiger_order_id %}
