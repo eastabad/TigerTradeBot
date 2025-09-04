@@ -425,8 +425,8 @@ class TigerClient:
             # Place order
             result = self.client.place_order(order)
             
-            if result and hasattr(result, 'id'):
-                order_id = str(result.id)
+            if result and order.id:
+                order_id = str(order.id)
                 logger.info(f"Close position order placed successfully: {order_id}")
                 return {
                     'success': True,
@@ -437,25 +437,12 @@ class TigerClient:
                     'original_position': current_quantity
                 }
             else:
-                # Check if the result has order data even without 'id' attribute
-                if result and hasattr(result, 'data') and result.data and hasattr(result.data, 'id'):
-                    order_id = str(result.data.id)
-                    logger.info(f"Close position order placed successfully (data.id): {order_id}")
-                    return {
-                        'success': True,
-                        'message': f'Close position order placed for {symbol}',
-                        'order_id': order_id,
-                        'action': action.lower(),
-                        'quantity': close_quantity,
-                        'original_position': current_quantity
-                    }
-                else:
-                    logger.error(f"Failed to place close position order: {result}")
-                    return {
-                        'success': False,
-                        'error': 'Failed to place close position order',
-                        'details': str(result) if result else 'No result returned'
-                    }
+                logger.error(f"Failed to place close position order: {order_id if 'order_id' in locals() else 'Unknown ID'}")
+                return {
+                    'success': False,
+                    'error': 'Failed to place close position order',
+                    'details': str(result) if result else 'No result returned'
+                }
                 
         except Exception as e:
             logger.error(f"Error closing position for {symbol}: {str(e)}")
