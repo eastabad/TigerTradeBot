@@ -106,22 +106,28 @@ class DiscordNotifier:
                     content = f"🔸 **平仓完成**\n股票: {symbol_name} ({trade.symbol})\n数量: {trade.quantity}股\n结果: **完全成交**"
                     if trade.filled_price:
                         content += f"\n成交价: ${trade.filled_price:.2f}"
-                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股完全成交{trade.filled_price:.2f}美元"
+                        # 判断平仓的是做多还是做空仓位：平仓时卖出=平多仓，买入=平空仓
+                        position_type = "做多仓位" if trade.side.value == 'sell' else "做空仓位"
+                        tts_content = f"{symbol_name}平仓{position_type}{int(trade.quantity)}股完全成交{trade.filled_price:.2f}美元"
                     else:
-                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股完全成交"
+                        position_type = "做多仓位" if trade.side.value == 'sell' else "做空仓位"
+                        tts_content = f"{symbol_name}平仓{position_type}{int(trade.quantity)}股完全成交"
                     color = 0xff9500  # 橙色
                 elif status == 'partially_filled':
                     filled_qty = getattr(trade, 'filled_quantity', 0) or 0
                     content = f"🔸 **平仓进行中**\n股票: {symbol_name} ({trade.symbol})\n数量: {trade.quantity}股\n结果: **部分成交** ({filled_qty}股)"
                     if trade.filled_price:
                         content += f"\n成交价: ${trade.filled_price:.2f}"
-                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股部分成交{int(filled_qty)}股{trade.filled_price:.2f}美元"
+                        position_type = "做多仓位" if trade.side.value == 'sell' else "做空仓位"
+                        tts_content = f"{symbol_name}平仓{position_type}{int(trade.quantity)}股部分成交{int(filled_qty)}股{trade.filled_price:.2f}美元"
                     else:
-                        tts_content = f"{symbol_name}平仓{int(trade.quantity)}股部分成交{int(filled_qty)}股"
+                        position_type = "做多仓位" if trade.side.value == 'sell' else "做空仓位"
+                        tts_content = f"{symbol_name}平仓{position_type}{int(trade.quantity)}股部分成交{int(filled_qty)}股"
                     color = 0xffff00  # 黄色
                 else:
                     content = f"🔸 **平仓状态**\n股票: {symbol_name} ({trade.symbol})\n数量: {trade.quantity}股\n结果: {status}"
-                    tts_content = f"{symbol_name}平仓{int(trade.quantity)}股状态{status}"
+                    position_type = "做多仓位" if trade.side.value == 'sell' else "做空仓位"
+                    tts_content = f"{symbol_name}平仓{position_type}{int(trade.quantity)}股状态{status}"
                     color = 0x888888  # 灰色
                 title = "持仓平仓通知"
             else:
@@ -130,22 +136,28 @@ class DiscordNotifier:
                     content = f"✅ **订单完成**\n股票: {symbol_name} ({trade.symbol})\n{action}数量: {trade.quantity}股\n结果: **完全成交**"
                     if trade.filled_price:
                         content += f"\n成交价: ${trade.filled_price:.2f}"
-                        tts_content = f"{symbol_name}{action}{int(trade.quantity)}股完全成交{trade.filled_price:.2f}美元"
+                        # 开仓时：买入=做多开仓，卖出=做空开仓
+                        open_type = "做多开仓买入" if trade.side.value == 'buy' else "做空开仓卖出"
+                        tts_content = f"{symbol_name}{open_type}{int(trade.quantity)}股完全成交{trade.filled_price:.2f}美元"
                     else:
-                        tts_content = f"{symbol_name}{action}{int(trade.quantity)}股完全成交"
+                        open_type = "做多开仓买入" if trade.side.value == 'buy' else "做空开仓卖出"
+                        tts_content = f"{symbol_name}{open_type}{int(trade.quantity)}股完全成交"
                     color = 0x00ff00  # 绿色
                 elif status == 'partially_filled':
                     filled_qty = getattr(trade, 'filled_quantity', 0) or 0
                     content = f"⏳ **订单部分成交**\n股票: {symbol_name} ({trade.symbol})\n{action}数量: {trade.quantity}股\n结果: **部分成交** ({filled_qty}股)"
                     if trade.filled_price:
                         content += f"\n成交价: ${trade.filled_price:.2f}"
-                        tts_content = f"{symbol_name}{action}{int(trade.quantity)}股部分成交{int(filled_qty)}股{trade.filled_price:.2f}美元"
+                        open_type = "做多开仓买入" if trade.side.value == 'buy' else "做空开仓卖出"
+                        tts_content = f"{symbol_name}{open_type}{int(trade.quantity)}股部分成交{int(filled_qty)}股{trade.filled_price:.2f}美元"
                     else:
-                        tts_content = f"{symbol_name}{action}{int(trade.quantity)}股部分成交{int(filled_qty)}股"
+                        open_type = "做多开仓买入" if trade.side.value == 'buy' else "做空开仓卖出"
+                        tts_content = f"{symbol_name}{open_type}{int(trade.quantity)}股部分成交{int(filled_qty)}股"
                     color = 0xffff00  # 黄色
                 else:
                     content = f"📊 **订单状态更新**\n股票: {symbol_name} ({trade.symbol})\n{action}数量: {trade.quantity}股\n状态: {status}"
-                    tts_content = f"{symbol_name}{action}{int(trade.quantity)}股状态{status}"
+                    open_type = "做多开仓买入" if trade.side.value == 'buy' else "做空开仓卖出"
+                    tts_content = f"{symbol_name}{open_type}{int(trade.quantity)}股状态{status}"
                     color = 0x888888  # 灰色
                 title = "交易订单通知"
             
