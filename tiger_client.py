@@ -5,7 +5,7 @@ from tigeropen.tiger_open_config import TigerOpenClientConfig
 from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.util.contract_utils import stock_contract
 from tigeropen.common.util.order_utils import market_order, limit_order, limit_order_with_legs, order_leg
-from tigeropen.common.consts import Language, Market, Currency, TradingSessionType
+from tigeropen.common.consts import Language, Market, Currency, TradingSessionType, SecurityType
 from tigeropen.common.util.signature_utils import read_private_key
 from models import OrderType, Side
 from config import get_config
@@ -289,6 +289,152 @@ class TigerClient:
                 
         except Exception as e:
             logger.error(f"Error getting order status: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def get_positions(self, symbol=None):
+        """Get current positions"""
+        if not self.client:
+            return {
+                'success': False,
+                'error': 'Tiger client not initialized'
+            }
+        
+        try:
+            logger.info(f"Getting positions for symbol: {symbol or 'all'}")
+            
+            # Get positions from Tiger API
+            positions = self.client.get_positions(
+                account=self.client_config.account,
+                sec_type=SecurityType.STK,
+                currency=Currency.ALL,
+                market=Market.ALL,
+                symbol=symbol
+            )
+            
+            position_list = []
+            for pos in positions:
+                position_data = {
+                    'symbol': pos.contract.symbol,
+                    'quantity': pos.quantity,
+                    'average_cost': pos.average_cost,
+                    'market_value': pos.market_value,
+                    'unrealized_pnl': pos.unrealized_pnl,
+                    'sec_type': pos.contract.sec_type,
+                    'currency': pos.contract.currency,
+                    'multiplier': getattr(pos.contract, 'multiplier', 1)
+                }
+                position_list.append(position_data)
+                logger.info(f"Position: {pos.contract.symbol}, Qty: {pos.quantity}, Cost: {pos.average_cost}")
+            
+            return {
+                'success': True,
+                'positions': position_list,
+                'count': len(position_list)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting positions: {str(e)}")
+            return {
+                'success': False,
+                'error': str(e),
+                'positions': []
+            }
+    
+    def close_position(self, symbol, trading_session='regular'):
+        """Close existing position for a symbol"""
+        if not self.client:
+            return {
+                'success': False,
+                'error': 'Tiger client not initialized'
+            }
+        
+        try:
+            logger.info(f"Attempting to close position for {symbol}")
+            
+            # Get current position for this symbol
+            position_result = self.get_positions(symbol=symbol)
+            if not position_result['success'] or not position_result['positions']:
+                return {
+                    'success': False,
+                    'error': f'No position found for {symbol}'
+                }
+            
+            position = position_result['positions'][0]  # Get first matching position
+            current_quantity = position['quantity']
+            
+            if current_quantity == 0:
+                return {
+                    'success': False,
+                    'error': f'No position to close for {symbol} (quantity is 0)'
+                }
+            
+            logger.info(f"Current position for {symbol}: {current_quantity} shares")
+            
+            # Determine action based on current position
+            if current_quantity > 0:
+                action = 'SELL'  # Close long position
+                close_quantity = abs(current_quantity)
+            else:
+                action = 'BUY'   # Close short position  
+                close_quantity = abs(current_quantity)
+            
+            # Create contract
+            contract = stock_contract(symbol=symbol, currency='USD')
+            
+            # Determine trading session settings
+            session_map = {
+                'regular': None,
+                'extended': None,
+                'overnight': TradingSessionType.OVERNIGHT,
+                'full': TradingSessionType.FULL
+            }
+            
+            trading_session_type = session_map.get(trading_session)
+            outside_rth = trading_session != 'regular'
+            
+            logger.info(f"Closing position: {action} {close_quantity} shares of {symbol}")
+            logger.info(f"Trading session: {trading_session}, outside_rth: {outside_rth}")
+            
+            # Create market order to close position quickly
+            order = market_order(
+                account=self.client_config.account,
+                contract=contract,
+                action=action,
+                quantity=int(close_quantity)
+            )
+            
+            # Set trading session type and outside_rth
+            if trading_session_type:
+                order.trading_session_type = trading_session_type
+            order.outside_rth = outside_rth
+            
+            # Place order
+            result = self.client.place_order(order)
+            
+            if result and hasattr(result, 'id'):
+                order_id = str(result.id)
+                logger.info(f"Close position order placed successfully: {order_id}")
+                return {
+                    'success': True,
+                    'message': f'Close position order placed for {symbol}',
+                    'order_id': order_id,
+                    'action': action.lower(),
+                    'quantity': close_quantity,
+                    'original_position': current_quantity
+                }
+            else:
+                logger.error(f"Failed to place close position order: {result}")
+                return {
+                    'success': False,
+                    'error': 'Failed to place close position order',
+                    'details': str(result) if result else 'No result returned'
+                }
+                
+        except Exception as e:
+            logger.error(f"Error closing position for {symbol}: {str(e)}")
             return {
                 'success': False,
                 'error': str(e)

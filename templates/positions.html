@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Current Positions{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-chart-pie"></i> Current Positions</h2>
+                <a href="/" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-info">Total Positions</h5>
+                            <h3>{{ positions|length }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">Market Value</h5>
+                            <h3>${{ "%.2f"|format(total_market_value|default(0)) }}</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h5 class="card-title {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                Unrealized P&L
+                            </h5>
+                            <h3 class="{% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(total_pnl|default(0)) }}
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Positions Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-list"></i> Position Details</h5>
+                </div>
+                <div class="card-body">
+                    {% if positions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Avg Cost</th>
+                                    <th class="text-end">Market Value</th>
+                                    <th class="text-end">Unrealized P&L</th>
+                                    <th class="text-end">% P&L</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for position in positions %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ position.symbol }}</strong>
+                                        <small class="text-muted d-block">{{ position.currency }}</small>
+                                    </td>
+                                    <td class="text-end">
+                                        {% if position.quantity > 0 %}
+                                            <span class="badge bg-success">Long</span>
+                                        {% elif position.quantity < 0 %}
+                                            <span class="badge bg-danger">Short</span>
+                                        {% endif %}
+                                        <div>{{ position.quantity }}</div>
+                                    </td>
+                                    <td class="text-end">${{ "%.3f"|format(position.average_cost|default(0)) }}</td>
+                                    <td class="text-end">${{ "%.2f"|format(position.market_value|default(0)) }}</td>
+                                    <td class="text-end {% if position.unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {% if position.unrealized_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(position.unrealized_pnl|default(0)) }}
+                                    </td>
+                                    <td class="text-end {% if position.unrealized_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                        {% if position.average_cost and position.average_cost != 0 %}
+                                            {% set pnl_percent = ((position.unrealized_pnl / (position.average_cost * position.quantity|abs)) * 100) %}
+                                            {% if pnl_percent >= 0 %}+{% endif %}{{ "%.2f"|format(pnl_percent) }}%
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ position.sec_type }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No positions found</h5>
+                        <p class="text-muted">You currently have no open positions in your account.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Refresh Info -->
+            <div class="mt-3 text-center">
+                <small class="text-muted">
+                    <i class="fas fa-sync-alt"></i> 
+                    Position data updated in real-time from Tiger Securities
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

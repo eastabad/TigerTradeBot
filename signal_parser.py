@@ -39,14 +39,28 @@ class SignalParser:
         elif 'ticker' in signal_data:
             normalized['symbol'] = str(signal_data['ticker']).upper()
         
-        # Side (buy/sell)
-        side = signal_data.get('side', signal_data.get('action', '')).lower()
-        if side in ['buy', 'long']:
-            normalized['side'] = 'buy'
-        elif side in ['sell', 'short']:
-            normalized['side'] = 'sell'
+        # Check for flat/close signal first
+        sentiment = signal_data.get('sentiment', '').lower()
+        if sentiment == 'flat':
+            normalized['is_close_signal'] = True
+            normalized['close_type'] = 'flat'
+            normalized['side'] = signal_data.get('side', signal_data.get('action', 'sell')).lower()
+            logger.info(f"Detected flat/close signal for {normalized.get('symbol', 'unknown')}")
         else:
-            raise ValueError(f"Invalid side: {side}")
+            normalized['is_close_signal'] = False
+            
+        # Side (buy/sell)
+        if not normalized.get('is_close_signal'):
+            side = signal_data.get('side', signal_data.get('action', '')).lower()
+            if side in ['buy', 'long']:
+                normalized['side'] = 'buy'
+            elif side in ['sell', 'short']:
+                normalized['side'] = 'sell'
+            else:
+                raise ValueError(f"Invalid side: {side}")
+        else:
+            # For close signals, side is determined by current position
+            normalized['side'] = signal_data.get('side', signal_data.get('action', 'sell')).lower()
         
         # Quantity
         if 'quantity' in signal_data:
