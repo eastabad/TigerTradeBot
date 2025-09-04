@@ -152,11 +152,45 @@ def webhook():
                 
                 logger.info(f"Order placed successfully: {result['order_id']}")
                 
-                # Send Discord notification for successful order placement
+                # Get real-time order status from Tiger API before sending Discord notification
                 try:
-                    discord_notifier.send_order_notification(trade, 'pending', is_close=getattr(trade, 'is_close_position', False))
+                    import time
+                    time.sleep(1)  # Brief wait for order processing
+                    
+                    status_result = tiger_client.get_order_status(trade.tiger_order_id)
+                    if status_result['success']:
+                        # Update trade with real Tiger API data - map Tiger status to our enum
+                        tiger_status = status_result['status']
+                        if tiger_status == 'filled':
+                            trade.status = OrderStatus.FILLED
+                        elif tiger_status == 'pending':
+                            trade.status = OrderStatus.PENDING
+                        elif tiger_status == 'cancelled':
+                            trade.status = OrderStatus.CANCELLED
+                        elif tiger_status == 'rejected':
+                            trade.status = OrderStatus.REJECTED
+                        else:
+                            trade.status = OrderStatus.PENDING  # Default fallback
+                        if status_result['filled_price'] > 0:
+                            trade.price = status_result['filled_price']
+                            trade.filled_price = status_result['filled_price']
+                        trade.filled_quantity = status_result.get('filled_quantity', 0)
+                        
+                        # Send Discord notification with real Tiger data
+                        discord_status = status_result['status']
+                        discord_notifier.send_order_notification(trade, discord_status, is_close=getattr(trade, 'is_close_position', False))
+                        
+                        logger.info(f"Discord notification sent with real Tiger data: {discord_status}, price: {status_result.get('filled_price', 0)}")
+                    else:
+                        # Fallback to pending status if can't get real-time data
+                        discord_notifier.send_order_notification(trade, 'pending', is_close=getattr(trade, 'is_close_position', False))
                 except Exception as e:
-                    logger.error(f"Failed to send Discord notification: {str(e)}")
+                    logger.error(f"Failed to get real-time status or send Discord notification: {str(e)}")
+                    # Fallback notification
+                    try:
+                        discord_notifier.send_order_notification(trade, 'pending', is_close=getattr(trade, 'is_close_position', False))
+                    except Exception as e2:
+                        logger.error(f"Fallback Discord notification also failed: {str(e2)}")
                 
             elif trade is not None:
                 trade.status = OrderStatus.REJECTED
