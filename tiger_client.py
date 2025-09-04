@@ -366,7 +366,14 @@ class TigerClient:
             
             # Log details of each order
             for order in open_orders:
-                logger.info(f"Open order: {order.get('id')} - {order.get('action')} {order.get('totalQuantity')} {symbol} @ {order.get('limitPrice', 'MKT')} - Status: {order.get('status')} - CanCancel: {order.get('canCancel')}")
+                order_dict = order.__dict__ if hasattr(order, '__dict__') else order
+                order_id = getattr(order, 'id', None) or order_dict.get('id', 'unknown')
+                action = getattr(order, 'action', None) or order_dict.get('action', 'unknown')
+                quantity = getattr(order, 'totalQuantity', None) or order_dict.get('totalQuantity', 'unknown')
+                limit_price = getattr(order, 'limitPrice', None) or order_dict.get('limitPrice', 'MKT')
+                status = getattr(order, 'status', None) or order_dict.get('status', 'unknown')
+                can_cancel = getattr(order, 'canCancel', None) or order_dict.get('canCancel', False)
+                logger.info(f"Open order: {order_id} - {action} {quantity} {symbol} @ {limit_price} - Status: {status} - CanCancel: {can_cancel}")
             
             return {'success': True, 'orders': open_orders}
             
@@ -394,12 +401,13 @@ class TigerClient:
             errors = []
             
             for order in open_orders:
-                order_id = order.get('id')
-                can_cancel = order.get('canCancel', False)
+                order_dict = order.__dict__ if hasattr(order, '__dict__') else order
+                order_id = getattr(order, 'id', None) or order_dict.get('id', 'unknown')
+                can_cancel = getattr(order, 'canCancel', None) or order_dict.get('canCancel', False)
                 
                 logger.info(f"Processing order {order_id} for {symbol} - CanCancel: {can_cancel}")
                 
-                if can_cancel:
+                if can_cancel and order_id != 'unknown':
                     cancel_result = self.cancel_order(order_id)
                     if cancel_result['success']:
                         canceled_count += 1
@@ -409,7 +417,7 @@ class TigerClient:
                         logger.error(error_msg)
                         errors.append(error_msg)
                 else:
-                    logger.info(f"Order {order_id} cannot be canceled (canCancel=False)")
+                    logger.info(f"Order {order_id} cannot be canceled (canCancel={can_cancel})")
             
             logger.info(f"Canceled {canceled_count} out of {len(open_orders)} orders for {symbol}")
             

@@ -65,7 +65,7 @@ def webhook():
                 # Execute close position
                 tiger_client = TigerClient()
                 trading_session = parsed_signal.get('trading_session', 'regular')
-                result = tiger_client.close_position(parsed_signal['symbol'], trading_session)
+                result = tiger_client.close_position_with_sandbox_fallback(parsed_signal['symbol'], trading_session)
                 
                 # Create trade record for close position
                 if result['success']:
