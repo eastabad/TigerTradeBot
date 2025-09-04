@@ -203,7 +203,8 @@ def config():
         try:
             # Update configurations
             for key in ['TIGER_API_KEY', 'TIGER_SECRET_KEY', 'TIGER_ACCOUNT', 
-                       'MAX_TRADE_AMOUNT', 'TRADING_ENABLED', 'DISCORD_WEBHOOK_URL']:
+                       'MAX_TRADE_AMOUNT', 'TRADING_ENABLED', 'DISCORD_WEBHOOK_URL', 
+                       'DISCORD_TTS_WEBHOOK_URL']:
                 value = request.form.get(key, '')
                 if value:
                     set_config(key, value)
@@ -221,7 +222,8 @@ def config():
         'TIGER_ACCOUNT': get_config('TIGER_ACCOUNT', ''),
         'MAX_TRADE_AMOUNT': get_config('MAX_TRADE_AMOUNT', '10000'),
         'TRADING_ENABLED': get_config('TRADING_ENABLED', 'true'),
-        'DISCORD_WEBHOOK_URL': get_config('DISCORD_WEBHOOK_URL', '')
+        'DISCORD_WEBHOOK_URL': get_config('DISCORD_WEBHOOK_URL', ''),
+        'DISCORD_TTS_WEBHOOK_URL': get_config('DISCORD_TTS_WEBHOOK_URL', '')
     }
     
     return render_template('config.html', configs=configs)
