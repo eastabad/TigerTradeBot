@@ -116,13 +116,24 @@ class TigerClient:
             if has_stop_loss or has_take_profit:
                 # Use limit order for orders with attached orders (market orders don't support attachments)
                 if trade.order_type == OrderType.MARKET:
-                    # For market orders with attachments, we need to use limit order at a reasonable price
-                    # This is a limitation - attachments only work with limit orders
+                    # For market orders with attachments, convert to limit order at market price
                     logger.warning("Market orders don't support attachments, converting to limit order")
-                    return {
-                        'success': False,
-                        'error': 'Market orders with stop loss/take profit not supported. Use limit orders.'
-                    }
+                    # For market orders with stop/take profit, use reference price from signal
+                    reference_price = getattr(trade, 'reference_price', None)
+                    if reference_price:
+                        # Use reference price as basis for limit order, rounded to 0.01
+                        if action == 'BUY':
+                            trade.price = round(reference_price * 1.01, 2)  # Buy at 1% above reference, rounded
+                        else:
+                            trade.price = round(reference_price * 0.99, 2)  # Sell at 1% below reference, rounded
+                        logger.info(f"Converted market order to limit order at ${trade.price:.2f} (reference: ${reference_price:.2f})")
+                    else:
+                        # No reference price available, reject the order
+                        logger.error("No reference price available for market order conversion")
+                        return {
+                            'success': False,
+                            'error': 'Market orders with stop/take profit require reference price. Please use limit orders.'
+                        }
                 
                 # Create order legs for stop loss and take profit
                 order_legs = []

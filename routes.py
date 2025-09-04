@@ -120,6 +120,9 @@ def webhook():
                 trade.trading_session = parsed_signal.get('trading_session', 'regular')
                 trade.outside_rth = parsed_signal.get('outside_rth', False)
                 
+                # Add reference price for market order conversion
+                trade.reference_price = parsed_signal.get('reference_price')
+                
                 db.session.add(trade)
                 db.session.flush()  # Get the ID
                 

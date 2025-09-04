@@ -48,6 +48,9 @@ class Trade(db.Model):
     
     # Close position flag
     is_close_position = db.Column(db.Boolean, nullable=True, default=False)  # True for close/flat signals
+    
+    # Reference price for market order conversion
+    reference_price = db.Column(db.Float, nullable=True)  # Used to convert market orders with stop/take profit
 
 class TradingConfig(db.Model):
     id = db.Column(db.Integer, primary_key=True)

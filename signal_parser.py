@@ -105,6 +105,14 @@ class SignalParser:
         if 'take_profit' in signal_data:
             normalized['take_profit'] = float(signal_data['take_profit'])
         
+        # Reference price for market order conversion (参考价格)
+        if 'extras' in signal_data and 'referencePrice' in signal_data['extras']:
+            normalized['reference_price'] = float(signal_data['extras']['referencePrice'])
+        elif 'reference_price' in signal_data:
+            normalized['reference_price'] = float(signal_data['reference_price'])
+        elif 'referencePrice' in signal_data:
+            normalized['reference_price'] = float(signal_data['referencePrice'])
+        
         # Trading session type (交易时段)
         session_type = signal_data.get('trading_session', signal_data.get('session', 'regular')).lower()
         if session_type in ['regular', 'rth']:
