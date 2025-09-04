@@ -20,43 +20,25 @@ class TigerClient:
     def _initialize_client(self):
         """Initialize Tiger OpenAPI client using config file"""
         try:
-            # Use manual configuration with fallback to config file values
-            tiger_id = '20156340'  # From config file
-            account = '20156340'   # From config file
-            
-            # Read private key from config file
-            private_key = None
-            config_path = './tiger_openapi_config.properties'
-            if os.path.exists(config_path):
-                with open(config_path, 'r') as f:
-                    for line in f:
-                        if line.startswith('private_key_pk8='):
-                            private_key = line.split('=', 1)[1].strip()
-                            break
-            
-            # Fallback to database/env config
-            if not tiger_id:
-                tiger_id = get_config('TIGER_API_KEY') or os.getenv('TIGER_API_KEY')
-            if not private_key:
-                private_key = get_config('TIGER_SECRET_KEY') or os.getenv('TIGER_SECRET_KEY')
-            if not account:
-                account = get_config('TIGER_ACCOUNT') or os.getenv('TIGER_ACCOUNT')
-                
-            if not all([tiger_id, private_key, account]):
-                logger.error(f"Missing Tiger API credentials: tiger_id={bool(tiger_id)}, private_key={bool(private_key)}, account={bool(account)}")
-                return
-                
-            # Manual configuration
+            # Use TigerOpenClientConfig with props_path pointing to current directory
             from tigeropen.tiger_open_config import TigerOpenClientConfig
-            self.client_config = TigerOpenClientConfig(
-                tiger_id=tiger_id,
-                private_key=private_key,
-                account=account,
-                standard_account=account
-            )
             
+            # Initialize client config using the config file in current directory
+            self.client_config = TigerOpenClientConfig(props_path='./')
+            
+            # Override account if set in database config
+            account_override = get_config('TIGER_ACCOUNT')
+            if account_override:
+                self.client_config.account = account_override
+            
+            # Set additional configuration
+            self.client_config.language = 'zh_CN'
+            self.client_config.timeout = 15
+            
+            # Initialize trade client
             self.client = TradeClient(self.client_config)
-            logger.info(f"Tiger client initialized successfully with account: {account}")
+            
+            logger.info(f"Tiger client initialized successfully with account: {self.client_config.account}")
                 
         except Exception as e:
             logger.error(f"Failed to initialize Tiger client: {str(e)}")
