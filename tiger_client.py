@@ -149,21 +149,25 @@ class TigerClient:
                 
                 # Map Tiger status to our status
                 status_map = {
-                    'Submitted': 'pending',
+                    'Initial': 'pending',
+                    'Submitted': 'pending', 
                     'Filled': 'filled',
                     'Cancelled': 'cancelled',
                     'Rejected': 'rejected',
                     'PartiallyFilled': 'partially_filled'
                 }
                 
+                # Get status from order object - use correct attribute names
                 tiger_status = getattr(order, 'status', 'pending')
                 our_status = status_map.get(tiger_status, 'pending')
                 
                 return {
                     'success': True,
                     'status': our_status,
-                    'filled_price': getattr(order, 'avg_fill_price', None),
-                    'filled_quantity': getattr(order, 'filled_quantity', None)
+                    'tiger_status': tiger_status,  # Include original status for debugging
+                    'filled_price': getattr(order, 'avg_fill_price', 0) or getattr(order, 'avgFillPrice', 0),
+                    'filled_quantity': getattr(order, 'filled_quantity', 0) or getattr(order, 'filledQuantity', 0),
+                    'total_quantity': getattr(order, 'total_quantity', 0) or getattr(order, 'totalQuantity', 0)
                 }
             else:
                 return {
