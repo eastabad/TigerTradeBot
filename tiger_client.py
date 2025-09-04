@@ -139,26 +139,26 @@ class TigerClient:
                 order_legs = []
                 
                 if has_stop_loss:
-                    # Stop loss order leg
+                    # Stop loss order leg - Always enable extended hours for protective orders
                     stop_loss_leg = order_leg(
                         'LOSS', 
                         trade.stop_loss_price,
                         time_in_force='GTC',
-                        outside_rth=outside_rth
+                        outside_rth=True  # Force extended hours for stop loss protection
                     )
                     order_legs.append(stop_loss_leg)
-                    logger.info(f"Adding stop loss at {trade.stop_loss_price}")
+                    logger.info(f"Adding stop loss at {trade.stop_loss_price} (extended hours enabled)")
                 
                 if has_take_profit:
-                    # Take profit order leg  
+                    # Take profit order leg - Always enable extended hours for protective orders
                     take_profit_leg = order_leg(
                         'PROFIT',
                         trade.take_profit_price,
                         time_in_force='GTC', 
-                        outside_rth=outside_rth
+                        outside_rth=True  # Force extended hours for take profit protection
                     )
                     order_legs.append(take_profit_leg)
-                    logger.info(f"Adding take profit at {trade.take_profit_price}")
+                    logger.info(f"Adding take profit at {trade.take_profit_price} (extended hours enabled)")
                 
                 # Create limit order with legs
                 order = limit_order_with_legs(
