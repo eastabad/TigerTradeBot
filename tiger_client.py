@@ -375,6 +375,7 @@ class TigerClient:
             
             position = position_result['positions'][0]  # Get first matching position
             current_quantity = position['quantity']
+            salable_quantity = position.get('salable_qty', current_quantity)  # Get salable quantity
             
             if current_quantity == 0:
                 return {
@@ -382,7 +383,13 @@ class TigerClient:
                     'error': f'No position to close for {symbol} (quantity is 0)'
                 }
             
-            logger.info(f"Current position for {symbol}: {current_quantity} shares")
+            if salable_quantity == 0:
+                return {
+                    'success': False,
+                    'error': f'No salable position for {symbol} (salable quantity is 0, may be locked by pending orders)'
+                }
+            
+            logger.info(f"Current position for {symbol}: {current_quantity} shares, salable: {salable_quantity} shares")
             
             # Determine action based on current position
             if current_quantity > 0:
