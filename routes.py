@@ -151,10 +151,23 @@ def webhook():
                     logger.info(f"Take profit order created: {result['take_profit_order_id']}")
                 
                 logger.info(f"Order placed successfully: {result['order_id']}")
+                
+                # Send Discord notification for successful order placement
+                try:
+                    discord_notifier.send_order_notification(trade, 'pending', is_close=getattr(trade, 'is_close_position', False))
+                except Exception as e:
+                    logger.error(f"Failed to send Discord notification: {str(e)}")
+                
             elif trade is not None:
                 trade.status = OrderStatus.REJECTED
                 trade.error_message = result.get('error', 'Unknown error')
                 logger.error(f"Order rejected: {result.get('error', 'Unknown error')}")
+                
+                # Send Discord notification for rejected order
+                try:
+                    discord_notifier.send_order_notification(trade, 'rejected', is_close=getattr(trade, 'is_close_position', False))
+                except Exception as e:
+                    logger.error(f"Failed to send Discord notification: {str(e)}")
             
             db.session.add(signal_log)
             db.session.commit()
