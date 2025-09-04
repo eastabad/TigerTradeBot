@@ -383,16 +383,19 @@ class TigerClient:
             open_orders = self.client.get_open_orders(symbol=symbol)
             logger.info(f"Retrieved {len(open_orders)} open orders for {symbol}")
             
-            # Log details of each order
+            # Log details of each order - handling proper attribute access
             for order in open_orders:
-                order_dict = order.__dict__ if hasattr(order, '__dict__') else order
-                order_id = getattr(order, 'id', None) or order_dict.get('id', 'unknown')
-                action = getattr(order, 'action', None) or order_dict.get('action', 'unknown')
-                quantity = getattr(order, 'totalQuantity', None) or order_dict.get('totalQuantity', 'unknown')
-                limit_price = getattr(order, 'limitPrice', None) or order_dict.get('limitPrice', 'MKT')
-                status = getattr(order, 'status', None) or order_dict.get('status', 'unknown')
-                can_cancel = getattr(order, 'canCancel', None) or order_dict.get('canCancel', False)
-                logger.info(f"Open order: {order_id} - {action} {quantity} {symbol} @ {limit_price} - Status: {status} - CanCancel: {can_cancel}")
+                try:
+                    order_id = order.id
+                    action = order.action
+                    quantity = order.quantity
+                    limit_price = getattr(order, 'limit_price', getattr(order, 'aux_price', 'MKT'))
+                    status = order.status
+                    can_cancel = order.can_modify  # Fix: use can_modify instead of can_cancel
+                    logger.info(f"Open order: {order_id} - {action} {quantity} {symbol} @ {limit_price} - Status: {status} - CanCancel: {can_cancel}")
+                except Exception as e:
+                    logger.error(f"Error accessing order attributes: {e}")
+                    logger.info(f"Order attributes: {dir(order)}")
             
             return {'success': True, 'orders': open_orders}
             
@@ -420,23 +423,26 @@ class TigerClient:
             errors = []
             
             for order in open_orders:
-                order_dict = order.__dict__ if hasattr(order, '__dict__') else order
-                order_id = getattr(order, 'id', None) or order_dict.get('id', 'unknown')
-                can_cancel = getattr(order, 'canCancel', None) or order_dict.get('canCancel', False)
-                
-                logger.info(f"Processing order {order_id} for {symbol} - CanCancel: {can_cancel}")
-                
-                if can_cancel and order_id != 'unknown':
-                    cancel_result = self.cancel_order(order_id)
-                    if cancel_result['success']:
-                        canceled_count += 1
-                        logger.info(f"Successfully canceled order {order_id}")
+                try:
+                    order_id = order.id
+                    can_cancel = order.can_modify  # Fix: use can_modify instead of can_cancel
+                    
+                    logger.info(f"Processing order {order_id} for {symbol} - CanCancel: {can_cancel}")
+                    
+                    if can_cancel and order_id:
+                        cancel_result = self.cancel_order(order_id)
+                        if cancel_result['success']:
+                            canceled_count += 1
+                            logger.info(f"Successfully canceled order {order_id}")
+                        else:
+                            error_msg = f"Failed to cancel order {order_id}: {cancel_result.get('error')}"
+                            logger.error(error_msg)
+                            errors.append(error_msg)
                     else:
-                        error_msg = f"Failed to cancel order {order_id}: {cancel_result.get('error')}"
-                        logger.error(error_msg)
-                        errors.append(error_msg)
-                else:
-                    logger.info(f"Order {order_id} cannot be canceled (canCancel={can_cancel})")
+                        logger.info(f"Order {order_id} cannot be canceled (canCancel={can_cancel})")
+                except Exception as e:
+                    logger.error(f"Error processing order for cancellation: {e}")
+                    logger.info(f"Order attributes: {dir(order)}")
             
             logger.info(f"Canceled {canceled_count} out of {len(open_orders)} orders for {symbol}")
             
@@ -454,15 +460,17 @@ class TigerClient:
     def cancel_order(self, order_id):
         """Cancel a specific order"""
         try:
-            trade_client = self.get_trade_client()
-            if not trade_client:
-                return {'success': False, 'error': 'Failed to initialize trade client'}
+            if not self.client:
+                return {'success': False, 'error': 'Tiger client not initialized'}
 
-            # Cancel the order
-            result = trade_client.cancel_order(id=order_id)
+            # Cancel the order directly using the Tiger client
+            result = self.client.cancel_order(id=order_id)
             logger.info(f"Cancel order {order_id} result: {result}")
             
-            return {'success': True, 'result': result}
+            if result and len(result) > 0:
+                return {'success': True, 'result': result}
+            else:
+                return {'success': False, 'error': 'Cancel request failed'}
             
         except Exception as e:
             logger.error(f"Error canceling order {order_id}: {str(e)}")

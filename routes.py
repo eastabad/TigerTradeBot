@@ -386,3 +386,40 @@ def health_check():
         'timestamp': datetime.utcnow().isoformat(),
         'trading_enabled': get_config('TRADING_ENABLED', 'true') == 'true'
     })
+
+@app.route('/api/debug/orders/<symbol>')
+def debug_orders(symbol):
+    """Debug route to check open orders for a symbol"""
+    try:
+        tiger_client = TigerClient()
+        if not tiger_client:
+            return jsonify({'error': 'Tiger client not available'}), 500
+        
+        result = tiger_client.get_open_orders_for_symbol(symbol)
+        if not result['success']:
+            return jsonify({'error': result['error']}), 500
+            
+        orders_info = []
+        for order in result['orders']:
+            order_info = {
+                'id': getattr(order, 'id', 'unknown'),
+                'action': getattr(order, 'action', 'unknown'), 
+                'quantity': getattr(order, 'quantity', 'unknown'),
+                'status': getattr(order, 'status', 'unknown'),
+                'can_cancel': getattr(order, 'can_cancel', 'unknown'),
+                'order_type': getattr(order, 'order_type', 'unknown'),
+                'limit_price': getattr(order, 'limit_price', None),
+                'aux_price': getattr(order, 'aux_price', None),
+            }
+            orders_info.append(order_info)
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'order_count': len(result['orders']),
+            'orders': orders_info
+        })
+    
+    except Exception as e:
+        logger.error(f"Error debugging orders for {symbol}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
