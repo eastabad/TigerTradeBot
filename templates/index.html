@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Trading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4 fw-bold">Trading Dashboard</h1>
+        <p class="lead">Monitor your automated trading system status and recent activity.</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-bar fa-2x text-primary mb-3"></i>
+                <h3 class="card-title">{{ total_trades }}</h3>
+                <p class="card-text text-muted">Total Trades</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                <h3 class="card-title">{{ successful_trades }}</h3>
+                <p class="card-text text-muted">Successful</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-2x text-warning mb-3"></i>
+                <h3 class="card-title">{{ pending_trades }}</h3>
+                <p class="card-text text-muted">Pending</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-percentage fa-2x text-info mb-3"></i>
+                <h3 class="card-title">
+                    {% if total_trades > 0 %}
+                        {{ "%.1f"|format((successful_trades / total_trades) * 100) }}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </h3>
+                <p class="card-text text-muted">Success Rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Trades -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Trades
+                </h5>
+                <a href="{{ url_for('trades') }}" class="btn btn-outline-primary btn-sm">
+                    View All <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_trades %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Symbol</th>
+                                    <th>Side</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trade in recent_trades %}
+                                <tr>
+                                    <td><strong>{{ trade.symbol }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if trade.side.value == 'buy' else 'danger' }}">
+                                            {{ trade.side.value.upper() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ trade.quantity }}</td>
+                                    <td>
+                                        {% if trade.price %}
+                                            ${{ "%.2f"|format(trade.price) }}
+                                        {% else %}
+                                            Market
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ trade.order_type.value.upper() }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if trade.status.value == 'filled' %}success{% elif trade.status.value == 'pending' %}warning{% elif trade.status.value == 'rejected' %}danger{% else %}secondary{% endif %}">
+                                            {{ trade.status.value.upper() }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">{{ trade.created_at.strftime('%H:%M:%S') }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No trades yet</h5>
+                        <p class="text-muted">Trades will appear here when signals are received from TradingView.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-server me-2"></i>System Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Trading Engine</span>
+                    <span class="badge bg-success">Online</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Tiger API</span>
+                    <span class="badge bg-warning" id="tiger-status">Checking...</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Webhook Endpoint</span>
+                    <span class="badge bg-success">Active</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-link me-2"></i>Webhook URL
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-2">Use this URL in TradingView alerts:</p>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="webhook-url" 
+                           value="{{ request.url_root }}webhook" readonly>
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyWebhookUrl()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <small class="text-muted">Send POST requests with JSON data to this endpoint.</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Check system status periodically
+function checkSystemStatus() {
+    fetch('/api/health')
+        .then(response => response.json())
+        .then(data => {
+            const tigerStatus = document.getElementById('tiger-status');
+            if (data.trading_enabled) {
+                tigerStatus.textContent = 'Connected';
+                tigerStatus.className = 'badge bg-success';
+            } else {
+                tigerStatus.textContent = 'Disabled';
+                tigerStatus.className = 'badge bg-secondary';
+            }
+        })
+        .catch(error => {
+            const tigerStatus = document.getElementById('tiger-status');
+            tigerStatus.textContent = 'Error';
+            tigerStatus.className = 'badge bg-danger';
+        });
+}
+
+// Copy webhook URL to clipboard
+function copyWebhookUrl() {
+    const webhookInput = document.getElementById('webhook-url');
+    webhookInput.select();
+    webhookInput.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(webhookInput.value);
+    
+    // Show feedback
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-check"></i>';
+    button.classList.add('btn-success');
+    button.classList.remove('btn-outline-secondary');
+    
+    setTimeout(() => {
+        button.innerHTML = originalContent;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-secondary');
+    }, 2000);
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    checkSystemStatus();
+    setInterval(checkSystemStatus, 30000); // Check every 30 seconds
+});
+</script>
+{% endblock %}
