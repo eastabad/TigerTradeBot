@@ -354,6 +354,40 @@ class TigerClient:
                 'positions': []
             }
     
+    def get_open_orders_for_symbol(self, symbol):
+        """Get all open orders for a specific symbol"""
+        try:
+            trade_client = self.get_trade_client()
+            if not trade_client:
+                return {'success': False, 'error': 'Failed to initialize trade client'}
+
+            # Get open orders for the specific symbol
+            open_orders = trade_client.get_open_orders(symbol=symbol)
+            logger.info(f"Retrieved {len(open_orders)} open orders for {symbol}")
+            
+            return {'success': True, 'orders': open_orders}
+            
+        except Exception as e:
+            logger.error(f"Error getting open orders for {symbol}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def cancel_order(self, order_id):
+        """Cancel a specific order"""
+        try:
+            trade_client = self.get_trade_client()
+            if not trade_client:
+                return {'success': False, 'error': 'Failed to initialize trade client'}
+
+            # Cancel the order
+            result = trade_client.cancel_order(id=order_id)
+            logger.info(f"Cancel order {order_id} result: {result}")
+            
+            return {'success': True, 'result': result}
+            
+        except Exception as e:
+            logger.error(f"Error canceling order {order_id}: {str(e)}")
+            return {'success': False, 'error': str(e)}
+
     def close_position(self, symbol, trading_session='regular'):
         """Close existing position for a symbol"""
         if not self.client:
@@ -383,13 +417,46 @@ class TigerClient:
                     'error': f'No position to close for {symbol} (quantity is 0)'
                 }
             
+            logger.info(f"Current position for {symbol}: {current_quantity} shares, salable: {salable_quantity} shares")
+            
+            # CRITICAL: Cancel all open orders for this symbol before closing position
+            if salable_quantity == 0 or salable_quantity < current_quantity:
+                logger.info(f"Salable quantity ({salable_quantity}) less than total ({current_quantity}), canceling open orders for {symbol}")
+                
+                # Get open orders for this symbol
+                open_orders_result = self.get_open_orders_for_symbol(symbol)
+                if open_orders_result['success'] and open_orders_result['orders']:
+                    canceled_count = 0
+                    for order in open_orders_result['orders']:
+                        if order.get('canCancel', False):  # Only cancel cancelable orders
+                            order_id = order.get('id')
+                            logger.info(f"Canceling open order {order_id} for {symbol}")
+                            cancel_result = self.cancel_order(order_id)
+                            if cancel_result['success']:
+                                canceled_count += 1
+                            else:
+                                logger.error(f"Failed to cancel order {order_id}: {cancel_result.get('error')}")
+                    
+                    logger.info(f"Canceled {canceled_count} open orders for {symbol}")
+                    
+                    # Wait a moment for cancellations to process
+                    import time
+                    time.sleep(1)
+                    
+                    # Refresh position info after canceling orders
+                    position_result = self.get_positions(symbol=symbol)
+                    if position_result['success'] and position_result['positions']:
+                        position = position_result['positions'][0]
+                        current_quantity = position['quantity']
+                        salable_quantity = position.get('salable_qty', current_quantity)
+                        logger.info(f"After canceling orders - {symbol}: {current_quantity} shares, salable: {salable_quantity} shares")
+            
+            # Final check - if still no salable quantity, return error
             if salable_quantity == 0:
                 return {
                     'success': False,
-                    'error': f'No salable position for {symbol} (salable quantity is 0, may be locked by pending orders)'
+                    'error': f'No salable position for {symbol} (salable quantity is 0 even after canceling open orders)'
                 }
-            
-            logger.info(f"Current position for {symbol}: {current_quantity} shares, salable: {salable_quantity} shares")
             
             # Determine action based on current position
             if current_quantity > 0:
