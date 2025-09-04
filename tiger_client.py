@@ -563,8 +563,8 @@ class TigerClient:
             
             cancel_result = self.force_cancel_all_orders_for_symbol(symbol)
             if cancel_result['success']:
-                canceled_count = cancel_result['canceled_count']
-                total_orders = cancel_result['total_orders']
+                canceled_count = cancel_result.get('canceled_count', 0)
+                total_orders = cancel_result.get('total_orders', 0)
                 logger.info(f"Force canceled {canceled_count} out of {total_orders} orders for {symbol}")
                 
                 if canceled_count > 0:
