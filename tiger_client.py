@@ -142,8 +142,8 @@ class TigerClient:
             }
         
         try:
-            # Get orders by ID
-            orders = self.client.get_orders(order_id=int(order_id))
+            # Get orders by ID - use correct parameter name
+            orders = self.client.get_orders(account=self.client_config.account, id=int(order_id))
             
             if orders and len(orders) > 0:
                 order = orders[0]
