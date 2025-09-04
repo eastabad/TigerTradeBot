@@ -284,13 +284,32 @@ class TigerClient:
                 
                 our_status = status_map.get(tiger_status_str, 'pending')
                 
+                # Extract actual values from Tiger API response
+                # Try different attribute names to find the correct ones
+                avg_fill_price = (getattr(order, 'avg_fill_price', 0) or 
+                                 getattr(order, 'avgFillPrice', 0) or
+                                 getattr(order, 'average_fill_price', 0))
+                
+                filled_quantity = (getattr(order, 'filled', 0) or 
+                                  getattr(order, 'filled_quantity', 0) or
+                                  getattr(order, 'filledQuantity', 0))
+                
+                total_quantity = (getattr(order, 'quantity', 0) or
+                                 getattr(order, 'total_quantity', 0) or 
+                                 getattr(order, 'totalQuantity', 0))
+                
+                # Log all available attributes for debugging
+                order_attrs = [attr for attr in dir(order) if not attr.startswith('_')]
+                logger.info(f"Order {order_id} available attributes: {order_attrs}")
+                logger.info(f"Order {order_id} Tiger data: avgFillPrice={avg_fill_price}, filledQuantity={filled_quantity}, totalQuantity={total_quantity}")
+                
                 return {
                     'success': True,
                     'status': our_status,
                     'tiger_status': tiger_status,  # Include original status for debugging
-                    'filled_price': getattr(order, 'avg_fill_price', 0) or getattr(order, 'avgFillPrice', 0),
-                    'filled_quantity': getattr(order, 'filled_quantity', 0) or getattr(order, 'filledQuantity', 0),
-                    'total_quantity': getattr(order, 'total_quantity', 0) or getattr(order, 'totalQuantity', 0)
+                    'filled_price': avg_fill_price,
+                    'filled_quantity': filled_quantity,
+                    'total_quantity': total_quantity
                 }
             else:
                 return {
