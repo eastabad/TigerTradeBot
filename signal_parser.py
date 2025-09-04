@@ -1,6 +1,8 @@
 import json
 import logging
 from typing import Dict, Any
+from datetime import datetime, time
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -8,6 +10,41 @@ class SignalParser:
     def __init__(self):
         self.required_fields = ['symbol', 'side', 'quantity']
         self.optional_fields = ['price', 'order_type', 'time_in_force']
+    
+    def _is_regular_trading_hours(self) -> bool:
+        """
+        检测当前时间是否在美股常规交易时间内 (9:30 AM - 4:00 PM ET)
+        Returns True if in regular trading hours, False otherwise
+        """
+        try:
+            # Get current time in Eastern Time (US stock market timezone)
+            et_tz = pytz.timezone('America/New_York')
+            now_et = datetime.now(et_tz)
+            
+            # Get current weekday (0=Monday, 6=Sunday)
+            weekday = now_et.weekday()
+            
+            # Check if it's a trading day (Monday to Friday)
+            if weekday > 4:  # Saturday (5) or Sunday (6)
+                return False
+                
+            # Define regular trading hours (9:30 AM - 4:00 PM ET)
+            market_open = time(9, 30)  # 9:30 AM
+            market_close = time(16, 0)  # 4:00 PM
+            current_time = now_et.time()
+            
+            # Check if current time is within regular trading hours
+            is_regular_hours = market_open <= current_time <= market_close
+            
+            logger.info(f"Market time check: {now_et.strftime('%Y-%m-%d %H:%M:%S %Z')}, "
+                       f"Regular hours: {is_regular_hours}")
+            
+            return is_regular_hours
+            
+        except Exception as e:
+            logger.error(f"Error checking trading hours: {str(e)}")
+            # Default to False (assume outside regular hours) for safety
+            return False
     
     def parse(self, signal_data: Dict[str, Any]) -> Dict[str, Any]:
         """Parse TradingView signal data"""
@@ -126,12 +163,27 @@ class SignalParser:
         else:
             normalized['trading_session'] = 'regular'  # Default
         
-        # Outside regular trading hours flag
+        # Outside regular trading hours flag - Auto-determine based on current time
         if 'outside_rth' in signal_data:
+            # Use explicit setting from signal
             normalized['outside_rth'] = bool(signal_data['outside_rth'])
         else:
-            # Auto-determine based on session type
-            normalized['outside_rth'] = normalized['trading_session'] != 'regular'
+            # Smart auto-determination based on current market time
+            is_regular_hours = self._is_regular_trading_hours()
+            
+            if normalized['trading_session'] == 'regular':
+                # If signal specifies regular session but we're outside regular hours,
+                # automatically enable extended hours trading
+                if not is_regular_hours:
+                    normalized['outside_rth'] = True
+                    normalized['trading_session'] = 'extended'  # Upgrade to extended session
+                    logger.info("Auto-detected outside regular hours: enabling extended hours trading")
+                else:
+                    normalized['outside_rth'] = False
+                    logger.info("Auto-detected regular trading hours: standard session")
+            else:
+                # For extended, overnight, full sessions, always allow outside RTH
+                normalized['outside_rth'] = normalized['trading_session'] != 'regular'
         
         return normalized
     
