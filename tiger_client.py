@@ -142,11 +142,10 @@ class TigerClient:
             }
         
         try:
-            # Get orders by ID - use correct parameter name
-            orders = self.client.get_orders(account=self.client_config.account, id=int(order_id))
+            # Get single order by ID - use get_order method
+            order = self.client.get_order(account=self.client_config.account, id=int(order_id))
             
-            if orders and len(orders) > 0:
-                order = orders[0]
+            if order:
                 
                 # Map Tiger status to our status
                 status_map = {
