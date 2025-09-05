@@ -1,6 +1,7 @@
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, time
+import pytz
 from tigeropen.tiger_open_config import TigerOpenClientConfig
 from tigeropen.trade.trade_client import TradeClient
 from tigeropen.common.util.contract_utils import stock_contract
@@ -17,6 +18,41 @@ class TigerClient:
         self.client = None
         self.client_config = None
         self._initialize_client()
+    
+    def _is_regular_trading_hours(self) -> bool:
+        """
+        检测当前时间是否在美股常规交易时间内 (9:30 AM - 4:00 PM ET)
+        Returns True if in regular trading hours, False otherwise
+        """
+        try:
+            # Get current time in Eastern Time (US stock market timezone)
+            et_tz = pytz.timezone('America/New_York')
+            now_et = datetime.now(et_tz)
+            
+            # Get current weekday (0=Monday, 6=Sunday)
+            weekday = now_et.weekday()
+            
+            # Check if it's a trading day (Monday to Friday)
+            if weekday > 4:  # Saturday (5) or Sunday (6)
+                return False
+                
+            # Define regular trading hours (9:30 AM - 4:00 PM ET)
+            market_open = time(9, 30)  # 9:30 AM
+            market_close = time(16, 0)  # 4:00 PM
+            current_time = now_et.time()
+            
+            # Check if current time is within regular trading hours
+            is_regular_hours = market_open <= current_time <= market_close
+            
+            logger.info(f"Market time check: {now_et.strftime('%Y-%m-%d %H:%M:%S %Z')}, "
+                       f"Regular hours: {is_regular_hours}")
+            
+            return is_regular_hours
+            
+        except Exception as e:
+            logger.error(f"Error checking trading hours: {str(e)}")
+            # Default to False (assume outside regular hours) for safety
+            return False
     
     def _initialize_client(self):
         """Initialize Tiger OpenAPI client using config file"""
@@ -102,7 +138,23 @@ class TigerClient:
             }
             
             trading_session_type = session_map.get(trade.trading_session)
-            outside_rth = getattr(trade, 'outside_rth', False)
+            
+            # Smart auto-determination based on current market time
+            is_regular_hours = self._is_regular_trading_hours()
+            
+            if trade.trading_session == 'regular':
+                # If signal specifies regular session but we're outside regular hours,
+                # automatically enable extended hours trading
+                if not is_regular_hours:
+                    outside_rth = True
+                    trade.trading_session = 'extended'  # Upgrade to extended session
+                    logger.info("Place order: Auto-detected outside regular hours, enabling extended hours trading")
+                else:
+                    outside_rth = False
+                    logger.info("Place order: Auto-detected regular trading hours, standard session")
+            else:
+                # For extended, overnight, full sessions, always allow outside RTH
+                outside_rth = trade.trading_session != 'regular'
             
             logger.info(f"Trading session: {trade.trading_session}, outside_rth: {outside_rth}")
             
@@ -610,7 +662,7 @@ class TigerClient:
             # Create contract
             contract = stock_contract(symbol=symbol, currency='USD')
             
-            # Determine trading session settings
+            # Determine trading session settings with smart auto-detection
             session_map = {
                 'regular': None,
                 'extended': None,
@@ -619,7 +671,23 @@ class TigerClient:
             }
             
             trading_session_type = session_map.get(trading_session)
-            outside_rth = trading_session != 'regular'
+            
+            # Smart auto-determination based on current market time
+            is_regular_hours = self._is_regular_trading_hours()
+            
+            if trading_session == 'regular':
+                # If signal specifies regular session but we're outside regular hours,
+                # automatically enable extended hours trading for closing positions
+                if not is_regular_hours:
+                    outside_rth = True
+                    trading_session = 'extended'  # Upgrade to extended session
+                    logger.info("Close position: Auto-detected outside regular hours, enabling extended hours trading")
+                else:
+                    outside_rth = False
+                    logger.info("Close position: Auto-detected regular trading hours, standard session")
+            else:
+                # For extended, overnight, full sessions, always allow outside RTH
+                outside_rth = trading_session != 'regular'
             
             logger.info(f"Closing position: {action} {close_quantity} shares of {symbol}")
             logger.info(f"Trading session: {trading_session}, outside_rth: {outside_rth}")
