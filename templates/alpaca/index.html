@@ -1,0 +1,246 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Alpaca Paper Trading Dashboard</h4>
+    <div>
+        <form method="post" action="{{ url_for('alpaca.alpaca_sync_holdings') }}" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-warning">
+                <i class="fas fa-sync-alt me-1"></i>Sync Holdings
+            </button>
+        </form>
+        <form method="post" action="{{ url_for('alpaca.alpaca_poll_orders') }}" class="d-inline ms-2">
+            <button type="submit" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-search me-1"></i>Poll Orders
+            </button>
+        </form>
+    </div>
+</div>
+
+{% if account_info %}
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <span class="badge bg-success">{{ account_info.get('status', 'N/A') }}</span>
+                <span class="badge bg-warning text-dark ms-1">PAPER</span>
+            </div>
+            <div class="col-auto">
+                <span class="text-muted small">Portfolio:</span>
+                <span class="fw-bold monospace">${{ "%.2f"|format(account_info.get('portfolio_value', 0)|float) }}</span>
+            </div>
+            <div class="col-auto">
+                <span class="text-muted small">Cash:</span>
+                <span class="monospace">${{ "%.2f"|format(account_info.get('cash', 0)|float) }}</span>
+            </div>
+            <div class="col-auto">
+                <span class="text-muted small">Buying Power:</span>
+                <span class="monospace">${{ "%.2f"|format(account_info.get('buying_power', 0)|float) }}</span>
+            </div>
+            {% if day_change is not none %}
+            <div class="col-auto">
+                <span class="text-muted small">Day Change:</span>
+                <span class="monospace fw-bold {% if day_change >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                    {% if day_change >= 0 %}+{% endif %}${{ "%.2f"|format(day_change) }}
+                    {% if day_change_pct is not none %}
+                        <small>({% if day_change_pct >= 0 %}+{% endif %}{{ "%.2f"|format(day_change_pct) }}%)</small>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            <div class="col-auto ms-auto">
+                <a href="{{ url_for('alpaca.alpaca_account') }}" class="btn btn-sm btn-outline-secondary">Details</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card neutral">
+            <div class="card-body">
+                <div class="text-muted small">Open Positions</div>
+                <div class="fs-3 fw-bold monospace">{{ open_positions }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="text-muted small">Closed Positions</div>
+                <div class="fs-3 fw-bold monospace">{{ closed_positions }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if total_realized_pnl >= 0 %}profit{% else %}loss{% endif %}">
+            <div class="card-body">
+                <div class="text-muted small">Realized P&L</div>
+                <div class="fs-3 fw-bold monospace {% if total_realized_pnl >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                    ${{ "%.2f"|format(total_realized_pnl) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if total_unrealized_pnl >= 0 %}profit{% else %}loss{% endif %}">
+            <div class="card-body">
+                <div class="text-muted small">Unrealized P&L</div>
+                <div class="fs-3 fw-bold monospace {% if total_unrealized_pnl >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                    ${{ "%.2f"|format(total_unrealized_pnl) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="text-muted small">Total Trades</div>
+                <div class="fs-3 fw-bold monospace">{{ total_trades }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if win_rate >= 50 %}profit{% else %}loss{% endif %}">
+            <div class="card-body">
+                <div class="text-muted small">Win Rate</div>
+                <div class="fs-3 fw-bold monospace">{{ "%.1f"|format(win_rate) }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="text-muted small">Market Value</div>
+                <div class="fs-3 fw-bold monospace">${{ "%.2f"|format(total_market_value) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card neutral">
+            <div class="card-body">
+                <div class="text-muted small">Pending Orders</div>
+                <div class="fs-3 fw-bold monospace">{{ pending_orders }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if holdings %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-briefcase me-2"></i>Current Holdings</h6>
+        <span class="text-muted small">
+            {% if sync_status and sync_status.last_sync %}
+                Synced: {{ sync_status.last_sync.strftime('%H:%M:%S') }}
+            {% endif %}
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Qty</th>
+                        <th>Avg Cost</th>
+                        <th>Current</th>
+                        <th>Market Value</th>
+                        <th>P&L</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in holdings %}
+                    <tr>
+                        <td class="fw-bold">{{ h.symbol }}</td>
+                        <td class="monospace">{{ h.quantity }}</td>
+                        <td class="monospace">${{ "%.2f"|format(h.average_cost or 0) }}</td>
+                        <td class="monospace">${{ "%.2f"|format(h.current_price or 0) }}</td>
+                        <td class="monospace">${{ "%.2f"|format(h.market_value or 0) }}</td>
+                        <td class="monospace {% if (h.unrealized_pnl or 0) >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                            ${{ "%.2f"|format(h.unrealized_pnl or 0) }}
+                            {% if h.unrealized_pnl_pct is not none %}
+                                <small>({{ "%.2f"|format(h.unrealized_pnl_pct) }}%)</small>
+                            {% endif %}
+                        </td>
+                        <td class="monospace {% if (h.change_today or 0) >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                            {{ "%.2f"|format(h.change_today or 0) }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Recent Trades</h6>
+        <a href="{{ url_for('alpaca.alpaca_trades') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_trades %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th>Order ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trade in recent_trades %}
+                    <tr>
+                        <td class="monospace text-muted">{{ trade.created_at.strftime('%m/%d %H:%M') }}</td>
+                        <td class="fw-bold">{{ trade.symbol }}</td>
+                        <td>
+                            <span class="badge {% if trade.side.value == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ trade.side.value|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace">{{ trade.quantity }}</td>
+                        <td class="monospace">
+                            {% if trade.filled_price %}
+                                ${{ "%.2f"|format(trade.filled_price) }}
+                            {% elif trade.price %}
+                                ${{ "%.2f"|format(trade.price) }}
+                            {% else %}
+                                MKT
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ trade.status.value }}">
+                                {{ trade.status.value|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace text-muted small">
+                            {{ (trade.alpaca_order_id or '-')[:12] }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No trades yet. Send a webhook signal to <code>/alpaca/webhook</code> to start trading.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

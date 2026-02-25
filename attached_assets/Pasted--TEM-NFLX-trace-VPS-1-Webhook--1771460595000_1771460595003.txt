@@ -1,0 +1,57 @@
+从我们刚才把 TEM / NFLX 这些单子一路 trace 下来的结果来看，你描述的“理想行为”和当前这台 VPS 上的实际行为是这样对应的：
+
+你期望的是：
+
+1. Webhook 主路径
+  • 下单后秒级、市价单立即 filled
+  • 立刻：创建 TrailingStopPosition + 在 Tiger 端下 OCA（SL/TP）
+2. 调度器轮询（每 5 秒）
+  • 对那些延迟成交的限价单
+  • 一旦轮询发现 filled → 创建 TS + OCA
+
+而现在实际情况是：
+
+1. Webhook 主路径：TS 会建，OCA 没有建成功TEM 那单就是最好的例子：
+  • /webhook → SignalLog #7（real, TEM）
+  • Trade #7：TEM BUY 2 @ 56.73, FILLED
+  • OrderTracker #5：42278670221838336, ENTRY, FILLED
+  • Position #387：TEM_2026-02-19_1, long, 2 股
+  • TrailingStopPosition #3：
+symbol             = TEM
+account_type       = real
+entry_price        = 56.73
+signal_stop_loss   = 53.87
+fixed_stop_loss    = 53.87
+fixed_take_profit  = 62.12
+current_trailing_stop = 53.87说明 TS 创建 + SL/TP 参数写入都 OK。
+但我刚用 Tiger API 看 open orders：
+client.client.get_orders(account=41592544, symbol='TEM')返回只有一个订单：
+id=42278670221838336, action=BUY, type=LMT, status=FILLED, is_open=True没有任何 STOP / TAKE_PROFIT 子单或额外挂单。
+所以：Webhook 路径上，TS 已经按设计创建了，但 OCA（保护单）目前实际没有下到 Tiger 去。
+2. 调度器轮询路径：能拿到 filled 状态，但是否建 OCA 目前看不到证据
+  • 轮询代码用的是：
+client = TigerClient() / TigerPaperClient()
+result = client.get_order_status(tracker.tiger_order_id)
+if not result.get('success'):
+    continue
+status = result.get('status', '').lower()
+if status == 'filled':
+    handle_fill_event(...)  • 我刚单独测试 get_order_status('42278335978539008')（NFLX 那笔）是完全 OK 的：
+{ "success": true, "status": "filled", ... }  • 但是在 journalctl 里，没有看到：
+    • handle_fill_event 的日志
+    • “Entry filled: …” 那种 entry fill 日志
+    • 任何 “OCA order group placed / Stop Loss / Take Profit” 的日志
+这说明：
+  • Tiger API 轮询是通的（orders / get_order_status 都能返回 Filled）；
+  • 但目前没有看到轮询那条路径真正触发了 handle_fill_event 之后的 OCA 创建逻辑；
+  • 而且从数据库看，不论是 NFLX 还是 TEM，oca_group 表一直是空的，Tiger 端也没有任何保护挂单。
+
+综合这两点，我现在能确认的是：
+
+• 创建 TrailingStopPosition：不管是即时成交还是轮询确认，现在是可以正常创建/更新的（TEM 的 SL/TP 已经体现在 TS 记录里）。
+• 自动下 OCA（SL/TP 挂单）：目前实际没发生，无论是“秒级 filled”还是“轮询 filled”的路径，都没有看到任何一笔 STOP / TP 订单出现在 Tiger 的 open orders 里，也没有本地 oca_group 记录。
+
+所以你说的那两条现在是：
+
+1. Webhook 主路径：✅ 下单 + ✅ TS，❌ Tiger 端 OCA 保护单
+2. 调度器轮询：✅ 能拿到 filled 状态（从 Tiger 返回看），但 ❌ 我们还没看到它真的走到 “创建 TS + OCA” 的那一段（TS 目前更多是在 entry 逻辑里建出来的）。

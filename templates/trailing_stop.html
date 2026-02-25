@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block title %}Trailing Stop Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">
+        <i class="fas fa-chart-line me-2"></i>
+        移动止损管理
+    </h1>
+    <div>
+        <span id="scheduler-status" class="badge bg-secondary me-2">
+            <i class="fas fa-spinner fa-spin me-1"></i>检查中...
+        </span>
+        <span class="badge {% if config.is_enabled %}bg-success{% else %}bg-danger{% endif %} me-2">
+            {{ '系统启用' if config.is_enabled else '系统禁用' }}
+        </span>
+        <span id="live-indicator" class="live-indicator" style="display:none;" title="实时更新中"></span>
+        <span id="last-update-time" class="text-muted me-2" style="font-size:12px;"></span>
+        <button id="auto-refresh-btn" class="btn btn-outline-info btn-sm me-2" onclick="toggleLiveUpdate()">
+            <i class="fas fa-sync-alt me-1"></i>开启实时更新
+        </button>
+        <a href="{{ url_for('trailing_stop_config') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-cog me-1"></i>参数配置
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">活跃追踪</h6>
+                <h2 class="mb-0" id="stat-active">{{ active_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">已切换模式</h6>
+                <h2 class="mb-0" id="stat-switched">{{ switched_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">今日触发</h6>
+                <h2 class="mb-0" id="stat-triggered">{{ triggered_today }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted">检查间隔</h6>
+                <h2 class="mb-0">{{ config.check_interval_seconds }}秒</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-list me-2"></i>活跃追踪持仓</span>
+        <div>
+            <button class="btn btn-info btn-sm me-2" onclick="syncPositions()">
+                <i class="fas fa-exchange-alt me-1"></i>同步检测
+            </button>
+            <button class="btn btn-success btn-sm" onclick="manualCheck()">
+                <i class="fas fa-sync me-1"></i>手动检查
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="positions-table-wrapper" class="table-responsive" {% if not positions %}style="display:none;"{% endif %}>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>账户</th>
+                        <th>股票</th>
+                        <th>方向</th>
+                        <th>入场价</th>
+                        <th>当前价</th>
+                        <th>最高价</th>
+                        <th>原始止损</th>
+                        <th>Tiger止损单</th>
+                        <th>固定止盈</th>
+                        <th>移动止损</th>
+                        <th>
+                            <a href="{{ url_for('trailing_stop', sort='pnl_pct' if sort_by != 'pnl_pct' else 'default') }}" class="text-decoration-none {{ 'text-info' if sort_by == 'pnl_pct' else 'text-white' }}">
+                                浮盈% {% if sort_by == 'pnl_pct' %}<i class="fas fa-sort-amount-down fa-xs"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>趋势强度</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="positions-tbody">
+                    {% for pos in positions %}
+                    <tr data-position-id="{{ pos.id }}">
+                        <td>
+                            <span class="badge {% if pos.account_type == 'real' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ pos.account_type }}
+                            </span>
+                        </td>
+                        <td><strong>{{ pos.symbol.replace('[PAPER]', '').strip() }}</strong></td>
+                        <td>
+                            <span class="badge {% if pos.side == 'long' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ '多' if pos.side == 'long' else '空' }}
+                            </span>
+                        </td>
+                        <td>${{ "%.2f"|format(pos.entry_price) }}</td>
+                        <td class="cell-current-price">
+                            {% if pos._display_current_price %}
+                            <strong class="text-primary">${{ "%.2f"|format(pos._display_current_price) }}</strong>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-highest-price">${{ "%.2f"|format(pos.highest_price or pos.entry_price) }}</td>
+                        <td>
+                            {% if pos.signal_stop_loss %}
+                            ${{ "%.2f"|format(pos.signal_stop_loss) }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-fixed-stop-loss">
+                            {% if pos.fixed_stop_loss %}
+                            ${{ "%.2f"|format(pos.fixed_stop_loss) }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-fixed-tp">
+                            {% if pos.fixed_take_profit %}
+                            {% if pos.has_switched_to_trailing %}
+                            <del class="text-muted">${{ "%.2f"|format(pos.fixed_take_profit) }}</del>
+                            {% else %}
+                            ${{ "%.2f"|format(pos.fixed_take_profit) }}
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-trailing-stop">
+                            {% if pos.current_trailing_stop %}
+                            <strong class="text-info">${{ "%.2f"|format(pos.current_trailing_stop) }}</strong>
+                            {% else %}
+                            <span class="text-muted">计算中</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-profit-pct">
+                            {% if pos._display_profit_pct is defined and pos._display_profit_pct is not none %}
+                            <span class="{% if pos._display_profit_pct >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if pos._display_profit_pct >= 0 %}+{% endif %}{{ "%.2f"|format(pos._display_profit_pct) }}%
+                            </span>
+                            {% elif pos.current_profit_pct %}
+                            <span class="{% if pos.current_profit_pct >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.2f"|format(pos.current_profit_pct * 100) }}%
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-trend">
+                            {% if pos.trend_strength is not none %}
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1" style="height: 8px; width: 60px;">
+                                    <div class="progress-bar {% if pos.trend_strength >= 60 %}bg-success{% elif pos.trend_strength >= 40 %}bg-warning{% else %}bg-secondary{% endif %}" 
+                                         style="width: {{ pos.trend_strength }}%"></div>
+                                </div>
+                                <small class="ms-1 {% if pos.trend_strength >= 60 %}text-success{% elif pos.trend_strength >= 40 %}text-warning{% else %}text-muted{% endif %}">
+                                    {{ "%.0f"|format(pos.trend_strength) }}
+                                </small>
+                            </div>
+                            <small class="text-muted d-block" style="font-size: 10px;">
+                                动量:{{ "%.1f"|format(pos.momentum_score or 0) }} 连续:{{ pos.consecutive_highs or 0 }}
+                            </small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="cell-status">
+                            {% if pos.has_switched_to_trailing %}
+                            <span class="badge bg-info">追踪中</span>
+                            {% elif pos.current_profit_pct and pos.current_profit_pct < 0 %}
+                            <span class="badge bg-secondary">浮亏</span>
+                            {% else %}
+                            <span class="badge bg-primary">监控中</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deactivate({{ pos.id }})">
+                                <i class="fas fa-stop"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="no-positions-msg" class="text-center text-muted py-4" {% if positions %}style="display:none;"{% endif %}>
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>暂无活跃的追踪持仓</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-history me-2"></i>最近触发记录
+    </div>
+    <div class="card-body">
+        {% if recent_triggers %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>时间</th>
+                        <th>股票</th>
+                        <th>触发价</th>
+                        <th>入场价</th>
+                        <th>盈亏%</th>
+                        <th>原因</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pos in recent_triggers %}
+                    <tr>
+                        <td>{{ pos.triggered_at.strftime('%m-%d %H:%M') if pos.triggered_at else '-' }}</td>
+                        <td>{{ pos.symbol }}</td>
+                        <td>${{ "%.2f"|format(pos.triggered_price) if pos.triggered_price else '-' }}</td>
+                        <td>${{ "%.2f"|format(pos.entry_price) }}</td>
+                        <td>
+                            {% if pos.triggered_price and pos.entry_price %}
+                            {% set pnl = ((pos.triggered_price - pos.entry_price) / pos.entry_price * 100) if pos.side == 'long' else ((pos.entry_price - pos.triggered_price) / pos.entry_price * 100) %}
+                            <span class="{% if pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.2f"|format(pnl) }}%
+                            </span>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>{{ pos.trigger_reason or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3">
+            <p class="mb-0">暂无触发记录</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@keyframes flash-green {
+    0% { background-color: transparent; }
+    30% { background-color: rgba(25, 135, 84, 0.3); }
+    100% { background-color: transparent; }
+}
+@keyframes flash-red {
+    0% { background-color: transparent; }
+    30% { background-color: rgba(220, 53, 69, 0.3); }
+    100% { background-color: transparent; }
+}
+.flash-up { animation: flash-green 1.2s ease-out; }
+.flash-down { animation: flash-red 1.2s ease-out; }
+.live-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #198754;
+    margin-right: 6px;
+    animation: pulse-live 2s infinite;
+}
+@keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+</style>
+<script>
+var previousData = {};
+var liveUpdateInterval = null;
+var LIVE_INTERVAL_MS = 5000;
+
+function fmt(val) {
+    return val !== null && val !== undefined ? val.toFixed(2) : null;
+}
+
+function updateCellWithFlash(cell, newHtml, oldVal, newVal) {
+    if (cell.innerHTML.trim() === newHtml.trim()) return;
+    cell.innerHTML = newHtml;
+    if (oldVal !== null && newVal !== null && oldVal !== newVal) {
+        cell.classList.remove('flash-up', 'flash-down');
+        void cell.offsetWidth;
+        cell.classList.add(newVal > oldVal ? 'flash-up' : 'flash-down');
+    }
+}
+
+function renderPositionRow(pos) {
+    var accountBadge = pos.account_type === 'real' ? 'bg-success' : 'bg-warning';
+    var sideBadge = pos.side === 'long' ? 'bg-success' : 'bg-danger';
+    var sideText = pos.side === 'long' ? '多' : '空';
+
+    var priceHtml = pos.current_price !== null
+        ? '<strong class="text-primary">$' + fmt(pos.current_price) + '</strong>'
+        : '<span class="text-muted">-</span>';
+
+    var highestHtml = pos.highest_price !== null ? '$' + fmt(pos.highest_price) : '<span class="text-muted">-</span>';
+
+    var fixedSlHtml = pos.fixed_stop_loss !== null
+        ? '$' + fmt(pos.fixed_stop_loss)
+        : '<span class="text-muted">-</span>';
+
+    var fixedTpHtml;
+    if (pos.fixed_take_profit !== null) {
+        fixedTpHtml = pos.has_switched_to_trailing
+            ? '<del class="text-muted">$' + fmt(pos.fixed_take_profit) + '</del>'
+            : '$' + fmt(pos.fixed_take_profit);
+    } else {
+        fixedTpHtml = '<span class="text-muted">-</span>';
+    }
+
+    var trailingHtml = pos.current_trailing_stop !== null
+        ? '<strong class="text-info">$' + fmt(pos.current_trailing_stop) + '</strong>'
+        : '<span class="text-muted">计算中</span>';
+
+    var profitPct = pos.display_profit_pct !== null ? pos.display_profit_pct : pos.current_profit_pct;
+    var profitHtml;
+    if (profitPct !== null) {
+        var profitClass = profitPct >= 0 ? 'text-success' : 'text-danger';
+        var sign = profitPct >= 0 ? '+' : '';
+        profitHtml = '<span class="' + profitClass + '">' + sign + profitPct.toFixed(2) + '%</span>';
+    } else {
+        profitHtml = '<span class="text-muted">-</span>';
+    }
+
+    var trendHtml;
+    if (pos.trend_strength !== null) {
+        var trendBarClass = pos.trend_strength >= 60 ? 'bg-success' : (pos.trend_strength >= 40 ? 'bg-warning' : 'bg-secondary');
+        var trendTextClass = pos.trend_strength >= 60 ? 'text-success' : (pos.trend_strength >= 40 ? 'text-warning' : 'text-muted');
+        trendHtml = '<div class="d-flex align-items-center">'
+            + '<div class="progress flex-grow-1" style="height:8px;width:60px;">'
+            + '<div class="progress-bar ' + trendBarClass + '" style="width:' + pos.trend_strength + '%"></div></div>'
+            + '<small class="ms-1 ' + trendTextClass + '">' + Math.round(pos.trend_strength) + '</small></div>'
+            + '<small class="text-muted d-block" style="font-size:10px;">动量:' + (pos.momentum_score || 0).toFixed(1) + ' 连续:' + (pos.consecutive_highs || 0) + '</small>';
+    } else {
+        trendHtml = '<span class="text-muted">-</span>';
+    }
+
+    var statusHtml;
+    if (pos.has_switched_to_trailing) {
+        statusHtml = '<span class="badge bg-info">追踪中</span>';
+    } else if (profitPct !== null && profitPct < 0) {
+        statusHtml = '<span class="badge bg-secondary">浮亏</span>';
+    } else {
+        statusHtml = '<span class="badge bg-primary">监控中</span>';
+    }
+
+    return {priceHtml: priceHtml, highestHtml: highestHtml, fixedSlHtml: fixedSlHtml,
+            fixedTpHtml: fixedTpHtml, trailingHtml: trailingHtml, profitHtml: profitHtml,
+            trendHtml: trendHtml, statusHtml: statusHtml, accountBadge: accountBadge,
+            sideBadge: sideBadge, sideText: sideText};
+}
+
+function refreshPositionsData() {
+    fetch('/api/trailing-stop/positions-data')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) return;
+
+            document.getElementById('stat-active').textContent = data.active_count;
+            document.getElementById('stat-switched').textContent = data.switched_count;
+            document.getElementById('stat-triggered').textContent = data.triggered_today;
+
+            var tbody = document.getElementById('positions-tbody');
+            var noDataDiv = document.getElementById('no-positions-msg');
+
+            if (data.positions.length === 0) {
+                if (tbody) tbody.innerHTML = '';
+                if (noDataDiv) noDataDiv.style.display = '';
+                var tableCard = document.getElementById('positions-table-wrapper');
+                if (tableCard) tableCard.style.display = 'none';
+                return;
+            }
+
+            var tableCard = document.getElementById('positions-table-wrapper');
+            if (tableCard) tableCard.style.display = '';
+            if (noDataDiv) noDataDiv.style.display = 'none';
+
+            var existingIds = {};
+            if (tbody) {
+                var rows = tbody.querySelectorAll('tr[data-position-id]');
+                rows.forEach(function(row) { existingIds[row.getAttribute('data-position-id')] = row; });
+            }
+
+            var newIds = {};
+            data.positions.forEach(function(pos) { newIds[pos.id] = true; });
+
+            Object.keys(existingIds).forEach(function(id) {
+                if (!newIds[id]) existingIds[id].remove();
+            });
+
+            data.positions.forEach(function(pos) {
+                var prev = previousData[pos.id] || {};
+                if (pos.current_price === null && prev.current_price !== undefined && prev.current_price !== null) {
+                    pos.current_price = prev.current_price;
+                }
+                if (pos.display_profit_pct === null && prev.display_profit_pct !== undefined && prev.display_profit_pct !== null) {
+                    pos.display_profit_pct = prev.display_profit_pct;
+                }
+                var rendered = renderPositionRow(pos);
+                var row = existingIds[pos.id];
+
+                if (row) {
+                    var cells = {
+                        price: row.querySelector('.cell-current-price'),
+                        highest: row.querySelector('.cell-highest-price'),
+                        fixedSl: row.querySelector('.cell-fixed-stop-loss'),
+                        fixedTp: row.querySelector('.cell-fixed-tp'),
+                        trailing: row.querySelector('.cell-trailing-stop'),
+                        profit: row.querySelector('.cell-profit-pct'),
+                        trend: row.querySelector('.cell-trend'),
+                        status: row.querySelector('.cell-status')
+                    };
+
+                    if (cells.price) updateCellWithFlash(cells.price, rendered.priceHtml, prev.current_price, pos.current_price);
+                    if (cells.highest) updateCellWithFlash(cells.highest, rendered.highestHtml, prev.highest_price, pos.highest_price);
+                    if (cells.fixedSl) updateCellWithFlash(cells.fixedSl, rendered.fixedSlHtml, prev.fixed_stop_loss, pos.fixed_stop_loss);
+                    if (cells.fixedTp) cells.fixedTp.innerHTML = rendered.fixedTpHtml;
+                    if (cells.trailing) updateCellWithFlash(cells.trailing, rendered.trailingHtml, prev.current_trailing_stop, pos.current_trailing_stop);
+                    if (cells.profit) updateCellWithFlash(cells.profit, rendered.profitHtml, prev.display_profit_pct, pos.display_profit_pct);
+                    if (cells.trend) cells.trend.innerHTML = rendered.trendHtml;
+                    if (cells.status) cells.status.innerHTML = rendered.statusHtml;
+                } else {
+                    var newRow = document.createElement('tr');
+                    newRow.setAttribute('data-position-id', pos.id);
+                    newRow.innerHTML =
+                        '<td><span class="badge ' + rendered.accountBadge + '">' + pos.account_type + '</span></td>' +
+                        '<td><strong>' + pos.symbol + '</strong></td>' +
+                        '<td><span class="badge ' + rendered.sideBadge + '">' + rendered.sideText + '</span></td>' +
+                        '<td>$' + fmt(pos.entry_price) + '</td>' +
+                        '<td class="cell-current-price">' + rendered.priceHtml + '</td>' +
+                        '<td class="cell-highest-price">' + rendered.highestHtml + '</td>' +
+                        '<td>' + (pos.signal_stop_loss !== null ? '$' + fmt(pos.signal_stop_loss) : '<span class="text-muted">-</span>') + '</td>' +
+                        '<td class="cell-fixed-stop-loss">' + rendered.fixedSlHtml + '</td>' +
+                        '<td class="cell-fixed-tp">' + rendered.fixedTpHtml + '</td>' +
+                        '<td class="cell-trailing-stop">' + rendered.trailingHtml + '</td>' +
+                        '<td class="cell-profit-pct">' + rendered.profitHtml + '</td>' +
+                        '<td class="cell-trend">' + rendered.trendHtml + '</td>' +
+                        '<td class="cell-status">' + rendered.statusHtml + '</td>' +
+                        '<td><button class="btn btn-outline-danger btn-sm" onclick="deactivate(' + pos.id + ')"><i class="fas fa-stop"></i></button></td>';
+                    tbody.appendChild(newRow);
+                }
+
+                previousData[pos.id] = {
+                    current_price: pos.current_price,
+                    highest_price: pos.highest_price,
+                    fixed_stop_loss: pos.fixed_stop_loss,
+                    current_trailing_stop: pos.current_trailing_stop,
+                    display_profit_pct: pos.display_profit_pct
+                };
+            });
+
+            var updateTime = document.getElementById('last-update-time');
+            if (updateTime) updateTime.textContent = new Date().toLocaleTimeString();
+        })
+        .catch(function(e) {
+            console.error('Live update error:', e);
+        });
+}
+
+function syncPositions() {
+    fetch('/api/trailing-stop/sync', {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var msg = data.message;
+                if (data.issues_found > 0) {
+                    msg += '\n\n发现问题:\n';
+                    data.details.forEach(function(d) {
+                        if (d.issues_found && d.issues_found.length > 0) {
+                            msg += d.symbol + ': ' + d.issues_found.join(', ') + '\n';
+                        }
+                    });
+                }
+                alert(msg);
+                if (data.fixes_applied > 0) refreshPositionsData();
+            } else {
+                alert('同步失败: ' + data.message);
+            }
+        })
+        .catch(function(e) { alert('同步失败: ' + e); });
+}
+
+function manualCheck() {
+    fetch('/api/trailing-stop/check', {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            alert('检查完成: ' + data.message);
+            refreshPositionsData();
+        })
+        .catch(function(e) { alert('检查失败: ' + e); });
+}
+
+function deactivate(id) {
+    if (!confirm('确定停用此追踪?')) return;
+    fetch('/api/trailing-stop/deactivate/' + id, {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            alert(data.message);
+            refreshPositionsData();
+        })
+        .catch(function(e) { alert('操作失败: ' + e); });
+}
+
+function updateSchedulerStatus() {
+    fetch('/api/trailing-stop/scheduler-status')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var el = document.getElementById('scheduler-status');
+            if (data.running) {
+                var lastCheck = data.last_check ? new Date(data.last_check).toLocaleTimeString() : '等待中';
+                el.className = 'badge bg-success me-2';
+                el.innerHTML = '<i class="fas fa-play-circle me-1"></i>自动监控中 (' + lastCheck + ')';
+            } else {
+                el.className = 'badge bg-warning me-2';
+                el.innerHTML = '<i class="fas fa-pause-circle me-1"></i>监控已停止';
+            }
+        })
+        .catch(function(e) {
+            var el = document.getElementById('scheduler-status');
+            el.className = 'badge bg-danger me-2';
+            el.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>状态未知';
+        });
+}
+
+function toggleLiveUpdate() {
+    var btn = document.getElementById('auto-refresh-btn');
+    var indicator = document.getElementById('live-indicator');
+
+    if (liveUpdateInterval) {
+        clearInterval(liveUpdateInterval);
+        liveUpdateInterval = null;
+        btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>开启实时更新';
+        btn.className = 'btn btn-outline-info btn-sm me-2';
+        if (indicator) indicator.style.display = 'none';
+    } else {
+        liveUpdateInterval = setInterval(refreshPositionsData, LIVE_INTERVAL_MS);
+        refreshPositionsData();
+        btn.innerHTML = '<i class="fas fa-pause me-1"></i>停止实时更新';
+        btn.className = 'btn btn-info btn-sm me-2';
+        if (indicator) indicator.style.display = 'inline-block';
+    }
+}
+
+updateSchedulerStatus();
+setInterval(updateSchedulerStatus, 10000);
+
+document.addEventListener('DOMContentLoaded', function() {
+    toggleLiveUpdate();
+});
+</script>
+{% endblock %}

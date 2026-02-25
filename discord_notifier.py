@@ -203,6 +203,62 @@ class DiscordNotifier:
             logger.error(f"发送订单状态Discord通知时发生错误: {str(e)}")
             return False
     
+    def send_both_accounts_notification(self, results):
+        """发送双账户交易通知"""
+        try:
+            real_result = results.get('real', {})
+            paper_result = results.get('paper', {})
+            
+            real_status = "✅ 成功" if real_result.get('success') else "❌ 失败"
+            paper_status = "✅ 成功" if paper_result.get('success') else "❌ 失败"
+            
+            content = f"🔄 **双账户交易信号**\n\n"
+            content += f"**真实账户**: {real_status}\n"
+            if real_result.get('trade_id'):
+                content += f"  订单ID: {real_result.get('trade_id')}\n"
+            if real_result.get('error'):
+                content += f"  错误: {real_result.get('error')}\n"
+            
+            content += f"\n**模拟账户**: {paper_status}\n"
+            if paper_result.get('trade_id'):
+                content += f"  订单ID: {paper_result.get('trade_id')}\n"
+            if paper_result.get('error'):
+                content += f"  错误: {paper_result.get('error')}\n"
+            
+            # Determine color based on results
+            if real_result.get('success') and paper_result.get('success'):
+                color = 0x00ff00  # Green - both success
+            elif real_result.get('success') or paper_result.get('success'):
+                color = 0xffff00  # Yellow - partial success
+            else:
+                color = 0xff0000  # Red - both failed
+            
+            embed = {
+                "title": "双账户交易通知",
+                "description": content,
+                "color": color,
+                "timestamp": datetime.utcnow().isoformat(),
+                "footer": {
+                    "text": "老虎证券自动交易系统"
+                }
+            }
+            
+            payload = {"embeds": [embed]}
+            
+            if self.webhook_url:
+                response = requests.post(self.webhook_url, json=payload, timeout=10)
+                if response.status_code == 204:
+                    logger.info("双账户交易Discord通知发送成功")
+                    return True
+                else:
+                    logger.error(f"双账户交易Discord通知发送失败: {response.status_code}")
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"发送双账户交易Discord通知时发生错误: {str(e)}")
+            return False
+    
     def _get_stock_chinese_name(self, symbol):
         """获取股票中文名称"""
         # 常见股票中文名称映射
@@ -224,6 +280,69 @@ class DiscordNotifier:
         }
         
         return name_map.get(symbol, symbol)
+    
+    def send_trailing_stop_notification(self, symbol, event_type, current_price, entry_price, profit_pct, details):
+        """发送移动止损通知"""
+        try:
+            symbol_name = self._get_stock_chinese_name(symbol.replace('[PAPER]', '').strip())
+            profit_display = profit_pct * 100 if profit_pct else 0
+            
+            if event_type == 'switch':
+                title = "移动止损切换通知"
+                color = 0x3498db  # 蓝色
+                emoji = "🔄"
+                content = f"{emoji} **切换至移动止损**\n"
+                content += f"股票: {symbol_name} ({symbol})\n"
+                content += f"入场价: ${entry_price:.2f}\n"
+                content += f"当前价: ${current_price:.2f}\n"
+                content += f"当前盈利: {profit_display:.2f}%\n"
+                content += f"原因: {details}"
+                
+                tts_content = f"{symbol_name}切换至移动止损模式,当前盈利{profit_display:.1f}%"
+                
+            elif event_type == 'trigger':
+                title = "移动止损触发通知"
+                color = 0xe74c3c  # 红色
+                emoji = "🛑"
+                content = f"{emoji} **移动止损触发**\n"
+                content += f"股票: {symbol_name} ({symbol})\n"
+                content += f"入场价: ${entry_price:.2f}\n"
+                content += f"触发价: ${current_price:.2f}\n"
+                content += f"最终盈利: {profit_display:.2f}%\n"
+                content += f"原因: {details}"
+                
+                tts_content = f"{symbol_name}移动止损触发,盈利{profit_display:.1f}%"
+                
+            else:
+                return False
+            
+            if self.webhook_url:
+                embed = {
+                    "title": title,
+                    "description": content,
+                    "color": color,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "footer": {"text": "移动止损系统"}
+                }
+                payload = {"embeds": [embed]}
+                requests.post(self.webhook_url, json=payload, timeout=10)
+            
+            if self.tts_webhook_url:
+                requests.post(self.tts_webhook_url, json={"content": tts_content}, timeout=10)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"发送移动止损通知时发生错误: {str(e)}")
+            return False
+
 
 # 全局实例
 discord_notifier = DiscordNotifier()
+
+
+def send_trailing_stop_notification(symbol, event_type, current_price, entry_price, profit_pct, details):
+    """便捷函数用于发送移动止损通知"""
+    return discord_notifier.send_trailing_stop_notification(
+        symbol, event_type, current_price, entry_price, profit_pct, details
+    )

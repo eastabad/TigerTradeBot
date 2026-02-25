@@ -51,7 +51,7 @@ def get_all_configs() -> dict:
 # Default configurations
 DEFAULT_CONFIGS = {
     'TRADING_ENABLED': 'true',
-    'MAX_TRADE_AMOUNT': '10000',
+    'MAX_TRADE_AMOUNT': '1000000',
     'LOG_LEVEL': 'INFO',
     'WEBHOOK_TIMEOUT': '30'
 }

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Watchlist - Market Data Subscriptions{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-list-ul me-3"></i>Market Data Watchlist
+        </h1>
+        <p class="lead">Manage Tiger WebSocket real-time price subscriptions. Shared across Tiger and Alpaca modules.</p>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-1">{{ status.active_count }}</h3>
+                <small class="text-muted">Active Symbols</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-1">{{ status.subscribed_count }}</h3>
+                <small class="text-muted">WS Subscribed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-1">
+                    {% if status.ws_connected %}
+                    <span class="text-success"><i class="fas fa-circle"></i></span>
+                    {% else %}
+                    <span class="text-danger"><i class="fas fa-circle"></i></span>
+                    {% endif %}
+                </h3>
+                <small class="text-muted">WebSocket</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="mb-1">{{ status.total_entries }}</h3>
+                <small class="text-muted">Total (incl. inactive)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Add Symbols</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('watchlist_add') }}">
+                    <div class="mb-3">
+                        <label for="symbols" class="form-label">Symbol(s)</label>
+                        <input type="text" class="form-control" id="symbols" name="symbols" 
+                               placeholder="AAPL NVDA TSLA" required>
+                        <div class="form-text">Enter one or more symbols separated by spaces or commas.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-plus me-1"></i>Add to Watchlist
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>How It Works</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Manual symbols stay subscribed permanently</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Signal symbols auto-added on new trades</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Auto-cleanup after 3 days of inactivity</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Tiger WS data shared with Alpaca module</li>
+                    <li><i class="fas fa-check text-success me-2"></i>Pre/post market real-time prices included</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Subscribed Symbols</h5>
+                <span class="badge bg-primary">{{ status.active_count }} active</span>
+            </div>
+            <div class="card-body p-0">
+                {% if status.entries %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Source</th>
+                                <th>Last Signal</th>
+                                <th>Last Position</th>
+                                <th>WS Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in status.entries %}
+                            <tr class="{{ 'text-muted' if not entry.is_active }}">
+                                <td>
+                                    <strong>{{ entry.symbol }}</strong>
+                                    {% if not entry.is_active %}
+                                    <span class="badge bg-secondary ms-1">inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.source == 'manual' %}
+                                    <span class="badge bg-info">manual</span>
+                                    {% elif 'alpaca' in entry.source %}
+                                    <span class="badge bg-warning">alpaca signal</span>
+                                    {% else %}
+                                    <span class="badge bg-success">tiger signal</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.last_signal_time %}
+                                    {{ entry.last_signal_time.strftime('%m/%d %H:%M') }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.last_position_time %}
+                                    {{ entry.last_position_time.strftime('%m/%d %H:%M') }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.symbol in status.subscribed_symbols %}
+                                    <span class="text-success"><i class="fas fa-circle me-1"></i>Live</span>
+                                    {% elif entry.is_active %}
+                                    <span class="text-warning"><i class="fas fa-circle me-1"></i>Pending</span>
+                                    {% else %}
+                                    <span class="text-muted"><i class="fas fa-circle me-1"></i>Off</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.is_active %}
+                                    <form method="POST" action="{{ url_for('watchlist_remove', symbol=entry.symbol) }}" 
+                                          style="display:inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                title="Deactivate">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="POST" action="{{ url_for('watchlist_reactivate', symbol=entry.symbol) }}" 
+                                          style="display:inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" 
+                                                title="Reactivate">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>No symbols in watchlist yet. Add some above or they will be added automatically when signals arrive.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

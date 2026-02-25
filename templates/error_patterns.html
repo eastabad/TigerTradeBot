@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Error Pattern Analysis - Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="fas fa-bug me-2"></i>Error Pattern Analysis</h4>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin_logs') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-scroll me-1"></i>Raw Logs
+            </a>
+            <button class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <form method="GET" action="{{ url_for('admin_error_patterns') }}" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Timeframe</label>
+                    <select name="hours" class="form-select form-select-sm">
+                        <option value="1" {{ 'selected' if hours == 1 }}>1h</option>
+                        <option value="4" {{ 'selected' if hours == 4 }}>4h</option>
+                        <option value="12" {{ 'selected' if hours == 12 }}>12h</option>
+                        <option value="24" {{ 'selected' if hours == 24 }}>24h</option>
+                        <option value="72" {{ 'selected' if hours == 72 }}>3d</option>
+                        <option value="168" {{ 'selected' if hours == 168 }}>7d</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Min Count</label>
+                    <select name="min_count" class="form-select form-select-sm">
+                        <option value="1" {{ 'selected' if min_count == 1 }}>1+</option>
+                        <option value="2" {{ 'selected' if min_count == 2 }}>2+</option>
+                        <option value="5" {{ 'selected' if min_count == 5 }}>5+</option>
+                        <option value="10" {{ 'selected' if min_count == 10 }}>10+</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">System</label>
+                    <select name="system" class="form-select form-select-sm">
+                        <option value="both" {{ 'selected' if system == 'both' }}>Both</option>
+                        <option value="tiger" {{ 'selected' if system == 'tiger' }}>Tiger</option>
+                        <option value="alpaca" {{ 'selected' if system == 'alpaca' }}>Alpaca</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-search me-1"></i>Analyze
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <div class="h4 mb-0 {{ 'text-danger' if analysis.total_errors > 50 else 'text-warning' if analysis.total_errors > 10 else 'text-success' }}">
+                        {{ analysis.total_errors }}
+                    </div>
+                    <small class="text-muted">Total Errors/Warnings</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <div class="h4 mb-0">{{ analysis.unique_patterns }}</div>
+                    <small class="text-muted">Unique Patterns</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <div class="h4 mb-0 {{ 'text-danger' if analysis.recurring_patterns > 5 else 'text-warning' if analysis.recurring_patterns > 0 else 'text-success' }}">
+                        {{ analysis.recurring_patterns }}
+                    </div>
+                    <small class="text-muted">Recurring Patterns</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body py-2">
+                    <div class="h4 mb-0">{{ hours }}h</div>
+                    <small class="text-muted">Timeframe</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if analysis.timeline %}
+    <div class="card mb-3">
+        <div class="card-header py-2">
+            <i class="fas fa-chart-bar me-1"></i>Error Timeline (by hour)
+        </div>
+        <div class="card-body py-2">
+            <canvas id="timelineChart" height="80"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mb-3">
+        {% if analysis.by_source %}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header py-2"><i class="fas fa-layer-group me-1"></i>By Source</div>
+                <div class="card-body py-2">
+                    <table class="table table-sm table-dark mb-0">
+                        {% for source, count in analysis.by_source.items() %}
+                        {% if loop.index <= 10 %}
+                        <tr>
+                            <td><code>{{ source }}</code></td>
+                            <td class="text-end">
+                                <span class="badge bg-{{ 'danger' if count > 20 else 'warning' if count > 5 else 'secondary' }}">{{ count }}</span>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if analysis.by_category %}
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header py-2"><i class="fas fa-tags me-1"></i>By Category</div>
+                <div class="card-body py-2">
+                    <table class="table table-sm table-dark mb-0">
+                        {% for category, count in analysis.by_category.items() %}
+                        {% if loop.index <= 10 %}
+                        <tr>
+                            <td><code>{{ category }}</code></td>
+                            <td class="text-end">
+                                <span class="badge bg-{{ 'danger' if count > 20 else 'warning' if count > 5 else 'secondary' }}">{{ count }}</span>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header py-2">
+            <i class="fas fa-fingerprint me-1"></i>Recurring Error Patterns
+            <span class="badge bg-secondary ms-2">{{ analysis.patterns|length }}</span>
+        </div>
+        <div class="card-body p-0">
+            {% if analysis.patterns %}
+            <div class="accordion" id="patternAccordion">
+                {% for p in analysis.patterns %}
+                <div class="accordion-item bg-dark border-secondary">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-dark text-light py-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#pattern{{ loop.index }}">
+                            <div class="d-flex w-100 justify-content-between align-items-center me-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-{{ 'danger' if p.level == 'CRITICAL' else 'danger' if p.level == 'ERROR' else 'warning' }}">
+                                        {{ p.level }}
+                                    </span>
+                                    <span class="badge bg-info">x{{ p.count }}</span>
+                                    {% if p.frequency_per_hour >= 1 %}
+                                    <span class="badge bg-danger">{{ p.frequency_per_hour }}/hr</span>
+                                    {% endif %}
+                                    <small class="text-muted font-monospace" style="max-width: 600px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">
+                                        {{ p.pattern[:120] }}
+                                    </small>
+                                </div>
+                                <div class="d-flex gap-1">
+                                    {% for sys in p.systems %}
+                                    <span class="badge bg-{{ 'primary' if sys == 'tiger' else 'success' }}">{{ sys }}</span>
+                                    {% endfor %}
+                                    {% for sym in p.symbols[:3] %}
+                                    <span class="badge bg-secondary">{{ sym }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="pattern{{ loop.index }}" class="accordion-collapse collapse">
+                        <div class="accordion-body py-2">
+                            <div class="row mb-2">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Sources:</small>
+                                    {% for s in p.sources %}
+                                    <span class="badge bg-secondary">{{ s }}</span>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">First seen:</small>
+                                    <span class="text-light">{{ p.first_seen[:19] if p.first_seen else 'N/A' }}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Last seen:</small>
+                                    <span class="text-light">{{ p.last_seen[:19] if p.last_seen else 'N/A' }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">Normalized pattern:</small>
+                                <pre class="bg-black text-warning p-2 rounded mb-0 small">{{ p.pattern }}</pre>
+                            </div>
+                            <div>
+                                <small class="text-muted">Sample messages:</small>
+                                {% for msg in p.sample_messages %}
+                                <pre class="bg-black text-light p-2 rounded mb-1 small" style="white-space: pre-wrap; word-break: break-all;">{{ msg }}</pre>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                <p class="mb-0">No recurring error patterns found in the last {{ hours }} hours.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if analysis.timeline %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('timelineChart').getContext('2d');
+const data = {{ analysis.timeline | tojson }};
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: data.map(d => {
+            const dt = new Date(d.hour);
+            return dt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }),
+        datasets: [{
+            label: 'Errors/Warnings',
+            data: data.map(d => d.count),
+            backgroundColor: data.map(d => d.count > 10 ? '#dc3545' : d.count > 3 ? '#ffc107' : '#198754'),
+            borderWidth: 0,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { ticks: { color: '#aaa', maxTicksLimit: 24 }, grid: { display: false } },
+            y: { ticks: { color: '#aaa' }, grid: { color: '#333' }, beginAtZero: true }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

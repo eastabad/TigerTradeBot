@@ -1,0 +1,140 @@
+026-02-04 19:11:30.72
+7b55a2da
+User
+"connect": {
+2026-02-04 19:11:30.72
+7b55a2da
+User
+}
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"useFullTick": false
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"id": 1,
+2026-02-04 19:11:30.72
+7b55a2da
+User
+DEBUG:root:sending frame: {
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"command": "CONNECT",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"acceptVersion": "3",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+}
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"sign": "BUvLcvjoIeIsiZD2XI3i9baqGwrPJg9z7Ubd7i+AHDnFHc9Jjo+HEieDCTHS0wkBZpBnSRCcB9OCzNZIo1Bg8n+jKWBtc/DOuG8jTxfC9CTNnOdxZrPA2qX/3Y7zqJchiImMp8oeZJD92l75+R7L13NtVTOd7PXhfgTLPgxXrKo=",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"sendInterval": 10000,
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"receiveInterval": 10000,
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"tigerId": "20156340",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"sdkVersion": "python-3.4.6",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"id": 2,
+2026-02-04 19:11:30.72
+7b55a2da
+User
+INFO:tiger_push_client:📊 Registered WebSocket event handlers
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"command": "SUBSCRIBE",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+DEBUG:root:sending frame: {
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"dataType": "OrderStatus"
+2026-02-04 19:11:30.72
+7b55a2da
+User
+DEBUG:root:sending frame: {
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"command": "SUBSCRIBE",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"command": "SUBSCRIBE",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+}
+2026-02-04 19:11:30.72
+7b55a2da
+User
+}
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"dataType": "Position"
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"dataType": "OrderStatus",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"subscribe": {
+2026-02-04 19:11:30.72
+7b55a2da
+User
+}
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"command": "SUBSCRIBE",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"dataType": "Position",
+2026-02-04 19:11:30.72
+7b55a2da
+User
+"subscribe": {
+2026-02-04 19:11:30.72
+7b55a2da
+User
+DEBUG:root:sending frame: {
+2026-02-04 19:11:31.11
+7b55a2da
+User
+}
+2026-02-04 19:11:31.11
+7b55a2da
+User
+code: 112
+2026-02-04 19:11:31.11
+7b55a2da
+User
+INFO:tiger_push_client:📊 Subscribe callback: command: MESSAGE
+2026-02-04 19:11:31.11
+7b55a2da
+User
+code: 112

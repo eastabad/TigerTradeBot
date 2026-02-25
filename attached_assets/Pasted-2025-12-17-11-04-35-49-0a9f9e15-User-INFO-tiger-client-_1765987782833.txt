@@ -1,0 +1,113 @@
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:📍 No existing position for MP, proceeding with new order
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:📊 Position query result for MP: success=True
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg/gateway HTTP/1.1" 200 None
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:📈 Position query returned 0 positions for MP
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:Trading session: regular, outside_rth: False
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:Adding take profit at 50.41 (extended hours enabled)
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+WARNING:tiger_client:Market orders don't support attachments, converting to limit order
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:Adding stop loss at 54.93 (extended hours enabled)
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:Place order: Auto-detected regular trading hours, standard session
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:Market time check: 2025-12-17 11:04:35 EST, Regular hours: True
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+DEBUG:tiger_openapi:[150ccdf4-db62-11f0-8e64-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg/gateway?biz_content={"account":"21655301822151141","action":"SELL","attach_type":"BRACKETS","currency":"USD","lang":"zh_CN","limit_price":53.1,"order_type":"LMT","outside_rth":false,"profit_taker_price":50.41,"profit_taker_rth":true,"profit_taker_tif":"GTC","sec_type":"STK","stop_loss_price":54.93,"stop_loss_rth":true,"stop_loss_tif":"GTC","symbol":"MP","time_in_force":"DAY","total_quantity":186}&charset=UTF-8&device_id=00:00:00:00:00:00&method=place_order&sign_type=RSA&tiger_id=20156340×tamp=2025-12-17 16:04:35&version=2.0&sign=t4IAX+UDiXqzAQ72YzhyFMcVXt5fd0RyJQYLf5sQJPzXqoxuITK9sKAjdrZthfCN4fUzBsdbgqAIlSGGeQUdpfjceI4EY3XmO2XdK+xh4lqa+zz8SR3T2Xx4XnhofooOpk6hHkza5//LstfapJgW9N4sv6jAHqrOAsoJ3hrVkEk=
+2025-12-17 11:04:35.49
+0a9f9e15
+User
+INFO:tiger_client:Converted market order to limit order at $53.10 (reference: $53.64)
+2025-12-17 11:04:35.81
+0a9f9e15
+User
+DEBUG:tiger_openapi:[150ccdf4-db62-11f0-8e64-4200a9fe0102]response:{"code":0,"message":"success","timestamp":1765987475698,"data":{"id":41561394468881408,"subIds":[41561394468881409,41561394469012480],"order_id":76,"orders":[{"symbol":"MP","market":"US","secType":"STK","currency":"USD","identifier":"MP","id":41561394468881408,"externalId":"76","orderId":76,"account":"21655301822151141","action":"SELL","orderType":"LMT","limitPrice":53.1,"totalQuantity":186,"totalQuantityScale":0,"filledQuantity":0,"filledQuantityScale":0,"filledCashAmount":0.0,"avgFillPrice":0.0,"timeInForce":"DAY","outsideRth":false,"commission":0.0,"gst":0.0,"realizedPnl":0.0,"remark":"","liquidation":false,"openTime":1765987475000,"updateTime":1765987475000,"latestTime":1765987476000,"name":"MP Materials Corp.","latestPrice":53.445,"attrDesc":"","userMark":"","attrList":["ATTACHED_ORDER"],"algoStrategy":"LMT","status":"Initial","source":"openapi","discount":0,"replaceStatus":"NONE","cancelStatus":"NONE","canModify":true,"canCancel":true,"isOpen":true,"orderDiscount":0,"tradingSessionType":"RTH"},{"symbol":"MP","market":"US","secType":"STK","currency":"USD","identifier":"MP","id":41561394468881409,"externalId":"77","orderId":77,"parentId":41561394468881408,"account":"21655301822151141","action":"BUY","orderType":"LMT","limitPrice":50.41,"totalQuantity":186,"totalQuantityScale":0,"filledQuantity":0,"filledQuantityScale":0,"filledCashAmount":0.0,"avgFillPrice":0.0,"timeInForce":"GTC","outsideRth":true,"commission":0.0,"gst":0.0,"realizedPnl":0.0,"remark":"","liquidation":false,"openTime":1765987475000,"updateTime":1765987475000,"latestTime":1765987476000,"name":"MP Materials Corp.","latestPrice":53.445,"attrDesc":"","userMark":"","attrList":["ATTACHED_ORDER","OCA"],"ocaGroupId":162364,"algoStrategy":"LMT","status":"Initial","source":"openapi","discount":0,"replaceStatus":"NONE","cancelStatus":"NONE","canModify":true,"canCancel":true,"isOpen":false,"orderDiscount":0,"tradingSessionType":"PRE_RTH_POST"},{"symbol":"MP","market":"US","secType":"STK","currency":"USD","identifier":"MP","id":41561394469012480,"externalId":"78","orderId":78,"parentId":41561394468881408,"account":"21655301822151141","action":"BUY","orderType":"STP","auxPrice":54.93,"totalQuantity":186,"totalQuantityScale":0,"filledQuantity":0,"filledQuantityScale":0,"filledCashAmount":0.0,"avgFillPrice":0.0,"timeInForce":"GTC","outsideRth":false,"commission":0.0,"gst":0.0,"realizedPnl":0.0,"remark":"","liquidation":false,"openTime":1765987475000,"updateTime":1765987475000,"latestTime":1765987476000,"name":"MP Materials Corp.","latestPrice":53.445,"attrDesc":"","userMark":"","attrList":["ATTACHED_ORDER","OCA"],"ocaGroupId":162364,"algoStrategy":"STP","status":"Initial","source":"openapi","discount":0,"replaceStatus":"NONE","cancelStatus":"NONE","canModify":true,"canCancel":true,"isOpen":false,"orderDiscount":0,"tradingSessionType":"RTH"}]},"sign":"kaJaWtrqtq99obHZylQH+pQSz/lavMJz1OlEksiG/ncf1r5DCE/iKQLd14YBuuTcyxLMrmPv89T6ROqcs4oL/tU4oZRJszC9TeAhblsPSTSXYttZrG8o7cq9Xcn5LBXQAFQen4ef6kC5eml3Vo7Pmk+Vgtx7s2x+6Zpdx24IW64="}
+2025-12-17 11:04:35.81
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg/gateway HTTP/1.1" 200 None
+2025-12-17 11:04:35.81
+0a9f9e15
+User
+INFO:tiger_client:Order placed successfully: 41561394468881408
+2025-12-17 11:04:35.81
+0a9f9e15
+User
+INFO:tiger_client:Attached orders created from subIds: 2 (Stop Loss: 41561394469012480, Take Profit: 41561394468881409)
+2025-12-17 11:04:36.81
+0a9f9e15
+User
+DEBUG:tiger_openapi:[15d61b82-db62-11f0-8e64-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg/gateway?biz_content={"account":"21655301822151141","id":41561394468881408,"lang":"zh_CN"}&charset=UTF-8&device_id=00:00:00:00:00:00&method=orders&sign_type=RSA&tiger_id=20156340×tamp=2025-12-17 16:04:36&version=2.0&sign=Wwo57UY4+5rPpw1/EvTemVBbFImMWuqYo7ubr8FkQdYjhY/gSJaipUS+I/PHAMnozQMgxXF/9RpBMkHGoK0a2TuL8qvufFYl9EwxSDAdkG6Xguh4wBRJ1b3+lUWYNnqmZFqTpBTnhSjEWtsizW8ojBRYkgsSRmyN8I/ZytbiURQ=
+2025-12-17 11:04:37.06
+0a9f9e15
+User
+DEBUG:tiger_openapi:[15d61b82-db62-11f0-8e64-4200a9fe0102]response:{"code":0,"message":"success","timestamp":1765987476976,"data":{"symbol":"MP","market":"US","secType":"STK","currency":"USD","identifier":"MP","id":41561394468881408,"externalId":"76","orderId":76,"account":"21655301822151141","action":"SELL","orderType":"LMT","limitPrice":53.1,"totalQuantity":186,"totalQuantityScale":0,"filledQuantity":0,"filledQuantityScale":0,"filledCashAmount":0.0,"avgFillPrice":0.0,"timeInForce":"DAY","outsideRth":false,"commission":0.0,"gst":0.0,"realizedPnl":0.0,"remark":"该股票暂时无法做空","liquidation":false,"openTime":1765987475000,"updateTime":1765987475000,"latestTime":1765987476000,"name":"MP Materials Corp.","latestPrice":53.46,"attrDesc":"","userMark":"","attrList":["ATTACHED_ORDER"],"algoStrategy":"LMT","status":"Invalid","source":"openapi","discount":0,"replaceStatus":"NONE","cancelStatus":"NONE","canModify":false,"canCancel":false,"isOpen":true,"orderDiscount":0,"tradingSessionType":"RTH"},"sign":"CDlEdaypuPHM7MvuTjkDB8kHArZ/MuGSdmQWAxvbxZhvj/nEtQaVLJHGXjamBCOzZuCmi5Sw+z2US/JL7w2yCj6wp2QbggyBVlQXHZHrzexecXAhcvCQEmhc4rGXBR/nShp8dTSOu7du6DPIFDKoIxl4dVloFawin7gVEh5B1Yk="}
+2025-12-17 11:04:37.06
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg/gateway HTTP/1.1" 200 None
+2025-12-17 11:04:37.07
+0a9f9e15
+User
+INFO:tiger_client:Order 41561394468881408 Tiger data: avgFillPrice=0, filledQuantity=0, totalQuantity=186
+2025-12-17 11:04:37.07
+0a9f9e15
+User
+INFO:tiger_client:Order 41561394468881408 available attributes: ['account', 'action', 'active', 'adjust_limit', 'algo_params', 'algo_strategy', 'attr_desc', 'attr_list', 'aux_price', 'avg_fill_price', 'can_modify', 'charges', 'combo_type', 'combo_type_desc', 'commission', 'contract', 'contract_legs', 'discount', 'expire_time', 'external_id', 'filled', 'filled_cash_amount', 'filled_scale', 'gst', 'id', 'is_open', 'is_partially_filled', 'latest_price', 'limit_price', 'liquidation', 'order_id', 'order_legs', 'order_time', 'order_type', 'orders', 'outside_rth', 'parent_id', 'percent_offset', 'quantity', 'quantity_scale', 'realized_pnl', 'reason', 'refund_cash_amount', 'remaining', 'secret_key', 'source', 'status', 'sub_ids', 'time_in_force', 'to_dict', 'total_cash_amount', 'trade_time', 'trading_session_type', 'trail_stop_price', 'trailing_percent', 'update_time', 'user_mark']
+2025-12-17 11:04:37.07
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): discord.com:443
+2025-12-17 11:04:37.27
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:https://discord.com:443 "POST /api/webhooks/1370414675648446524/Nc2XBdFRRIjGkuMNP51XevlAaaNeIAJq1f6XH-UTSbvUGijXW9eC4RdS7kdVKmEDDiot HTTP/1.1" 204 0
+2025-12-17 11:04:37.27
+0a9f9e15
+User
+INFO:discord_notifier:订单状态Discord通知发送成功: [PAPER]MP - [PAPER] pending
+
+2025-12-17 11:04:37.27
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): discord.com:443
+2025-12-17 11:04:37.51
+0a9f9e15
+User
+DEBUG:urllib3.connectionpool:https://discord.com:443 "POST /api/webhooks/1413185129664221215/ni6F96580s3rAtHIm4b6XdNMPzgD_HFgnuTPXPl3Z0LKhJbidEQZfDwZ1tcPn4cLcwij HTTP/1.1" 204 0
+2025-12-17 11:04:37.51
+0a9f9e15
+User
+INFO:discord_notifier:Discord TTS通知发送成功: [PAPER]MP做空开仓卖出186股状态[PAPER] pending
+2025-12-17 11:04:37.51
+0a9f9e15
+User
+INFO:routes:📝 [PAPER] Discord notification sent: pending

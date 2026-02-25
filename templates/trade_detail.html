@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}交易详情 #{{ trade.id }} - Trading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="display-6 fw-bold">
+                <i class="fas fa-info-circle me-3"></i>交易详情 #{{ trade.id }}
+            </h1>
+            <a href="{{ url_for('trades') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>返回列表
+            </a>
+        </div>
+        <p class="lead text-muted">查看完整的交易信号和执行结果</p>
+    </div>
+</div>
+
+<!-- Trade Summary -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>交易概览</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>股票代码:</strong><br>
+                        <span class="h5">{{ trade.symbol }}</span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>操作:</strong><br>
+                        <span class="badge bg-{{ 'success' if trade.side.value == 'buy' else 'danger' }} fs-6">
+                            <i class="fas fa-arrow-{{ 'up' if trade.side.value == 'buy' else 'down' }} me-1"></i>
+                            {{ trade.side.value.upper() }}
+                        </span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>数量:</strong><br>
+                        <span class="h6">{{ trade.quantity }}</span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>订单类型:</strong><br>
+                        <span class="badge bg-secondary">{{ trade.order_type.value.upper() }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>状态:</strong><br>
+                        <span class="badge bg-{% if trade.status.value == 'filled' %}success{% elif trade.status.value == 'pending' %}warning{% elif trade.status.value == 'rejected' %}danger{% else %}secondary{% endif %} fs-6">
+                            {{ trade.status.value.upper() }}
+                        </span>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>创建时间:</strong><br>
+                        <small class="text-muted">{{ trade.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>更新时间:</strong><br>
+                        <small class="text-muted">{{ trade.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Tiger订单ID:</strong><br>
+                        {% if trade.tiger_order_id %}
+                            <code class="small">{{ trade.tiger_order_id }}</code>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>交易时段:</strong><br>
+                        <span class="badge bg-info">{{ trade.trading_session or 'regular' }}</span>
+                        {% if trade.outside_rth %}
+                            <span class="badge bg-warning">扩展时间</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if trade.is_close_position %}
+                <div class="mt-2">
+                    <span class="badge bg-info"><i class="fas fa-times-circle me-1"></i>平仓订单</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JSON Data Display -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-download me-2"></i>TradingView信号原文
+                </h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="copyToClipboard('signal-json')" title="复制">
+                    <i class="fas fa-copy me-1"></i>复制
+                </button>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                {% if signal_json %}
+                    {% if signal_json.get('error') %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            数据解析出错: {{ signal_json.error }}
+                        </div>
+                        {% if trade.signal_data %}
+                            <strong>原始数据:</strong>
+                            <pre id="signal-json" class="bg-light p-3 rounded"><code>{{ trade.signal_data }}</code></pre>
+                        {% endif %}
+                    {% else %}
+                        <pre id="signal-json" class="bg-light p-3 rounded"><code>{{ signal_json | tojson(indent=2) }}</code></pre>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                        <p>没有信号数据</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>Tiger API响应原文
+                </h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="copyToClipboard('tiger-response-json')" title="复制">
+                    <i class="fas fa-copy me-1"></i>复制
+                </button>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                {% if tiger_response_json %}
+                    {% if tiger_response_json.get('error') %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            数据解析出错: {{ tiger_response_json.error }}
+                        </div>
+                        {% if trade.tiger_response %}
+                            <strong>原始数据:</strong>
+                            <pre id="tiger-response-json" class="bg-light p-3 rounded"><code>{{ trade.tiger_response }}</code></pre>
+                        {% endif %}
+                    {% else %}
+                        <pre id="tiger-response-json" class="bg-light p-3 rounded"><code>{{ tiger_response_json | tojson(indent=2) }}</code></pre>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                        <p>没有Tiger API响应数据</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Message if exists -->
+{% if trade.error_message %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>错误信息</h5>
+            </div>
+            <div class="card-body">
+                <pre class="text-danger">{{ trade.error_message }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Toast for copy notification -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="copyToast" class="toast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto">复制成功</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+            内容已复制到剪贴板
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const text = element.textContent || element.innerText;
+    
+    // Modern approach
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopyToast();
+        }).catch(err => {
+            console.error('复制失败:', err);
+            fallbackCopy(text);
+        });
+    } else {
+        // Fallback approach
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        showCopyToast();
+    } catch (err) {
+        console.error('复制失败:', err);
+        alert('复制失败，请手动复制内容');
+    } finally {
+        document.body.removeChild(textArea);
+    }
+}
+
+function showCopyToast() {
+    const toastElement = document.getElementById('copyToast');
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+}
+
+// Syntax highlighting for JSON (optional enhancement)
+document.addEventListener('DOMContentLoaded', function() {
+    // Add some basic styling to make JSON more readable
+    const preElements = document.querySelectorAll('pre code');
+    preElements.forEach(el => {
+        el.style.fontFamily = 'Monaco, Consolas, "Lucida Console", monospace';
+        el.style.fontSize = '0.875rem';
+        el.style.lineHeight = '1.5';
+        el.style.whiteSpace = 'pre-wrap';
+        el.style.wordBreak = 'break-all';
+    });
+});
+</script>
+{% endblock %}

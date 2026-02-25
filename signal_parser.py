@@ -69,24 +69,38 @@ class SignalParser:
         """Normalize signal data to standard format"""
         normalized = {}
         
-        # Handle different TradingView signal formats
-        # Format 1: Direct format
         if 'symbol' in signal_data:
             normalized['symbol'] = str(signal_data['symbol']).upper()
         elif 'ticker' in signal_data:
             normalized['symbol'] = str(signal_data['ticker']).upper()
+            logger.debug(f"Used 'ticker' field as symbol: {normalized['symbol']}")
         
         # Check for flat/close signal first
+        # Multiple ways to identify a close signal:
+        # 1. sentiment == 'flat'
+        # 2. closePosition == true
+        # 3. ratingstatus contains 'Exit'
         sentiment = signal_data.get('sentiment', '').lower()
-        if sentiment == 'flat':
+        close_position_flag = signal_data.get('closePosition', False)
+        rating_status = signal_data.get('data', {}).get('ratingstatus', '') if isinstance(signal_data.get('data'), dict) else ''
+        
+        is_close = (
+            sentiment == 'flat' or 
+            close_position_flag == True or 
+            (isinstance(close_position_flag, str) and close_position_flag.lower() == 'true') or
+            'exit' in rating_status.lower()
+        )
+        
+        if is_close:
             normalized['is_close_signal'] = True
-            normalized['close_type'] = 'flat'
+            normalized['close_type'] = 'exit' if 'exit' in rating_status.lower() else 'flat'
             normalized['side'] = signal_data.get('side', signal_data.get('action', 'sell')).lower()
-            logger.info(f"Detected flat/close signal for {normalized.get('symbol', 'unknown')}")
+            logger.info(f"🔴 Detected CLOSE signal for {normalized.get('symbol', 'unknown')} "
+                       f"(sentiment={sentiment}, closePosition={close_position_flag}, rating={rating_status}, "
+                       f"close_type={normalized['close_type']})")
         else:
             normalized['is_close_signal'] = False
             
-        # Side (buy/sell)
         if not normalized.get('is_close_signal'):
             side = signal_data.get('side', signal_data.get('action', '')).lower()
             if side in ['buy', 'long']:
@@ -94,25 +108,44 @@ class SignalParser:
             elif side in ['sell', 'short']:
                 normalized['side'] = 'sell'
             else:
+                logger.error(f"❌ Invalid side value: '{side}' for {normalized.get('symbol', 'unknown')}")
                 raise ValueError(f"Invalid side: {side}")
         else:
             # For close signals, side is determined by current position
             normalized['side'] = signal_data.get('side', signal_data.get('action', 'sell')).lower()
         
         # Quantity
-        if 'quantity' in signal_data:
-            normalized['quantity'] = float(signal_data['quantity'])
-        elif 'qty' in signal_data:
-            normalized['quantity'] = float(signal_data['qty'])
-        elif 'size' in signal_data:
-            normalized['quantity'] = float(signal_data['size'])
+        quantity_str = signal_data.get('quantity', signal_data.get('qty', signal_data.get('size', '')))
+        if quantity_str:
+            quantity_str = str(quantity_str).lower().strip()
+            if quantity_str == 'all':
+                normalized['quantity'] = 'all'
+                normalized['close_all'] = True
+            elif normalized.get('is_close_signal'):
+                try:
+                    qty_num = float(quantity_str)
+                    if qty_num > 0:
+                        normalized['quantity'] = qty_num
+                        normalized['close_all'] = False
+                    else:
+                        normalized['quantity'] = 'all'
+                        normalized['close_all'] = True
+                except ValueError:
+                    normalized['quantity'] = 'all'
+                    normalized['close_all'] = True
+            else:
+                try:
+                    normalized['quantity'] = float(quantity_str)
+                except ValueError:
+                    normalized['quantity'] = 1.0
         else:
-            # Default quantity if not specified
             normalized['quantity'] = 1.0
         
         # Price (for limit orders)
         if 'price' in signal_data:
-            normalized['price'] = float(signal_data['price'])
+            price_value = signal_data['price']
+            if str(price_value).lower() != 'market':
+                normalized['price'] = float(price_value)
         elif 'limit_price' in signal_data:
             normalized['price'] = float(signal_data['limit_price'])
         
@@ -125,22 +158,23 @@ class SignalParser:
         else:
             normalized['order_type'] = 'market'  # Default
         
-        # Stop loss and take profit
         if 'stopLoss' in signal_data and signal_data['stopLoss']:
             stop_loss_data = signal_data['stopLoss']
             if 'stopPrice' in stop_loss_data:
-                normalized['stop_loss'] = float(stop_loss_data['stopPrice'])
+                normalized['stop_loss'] = round(float(stop_loss_data['stopPrice']), 2)
         
         if 'takeProfit' in signal_data and signal_data['takeProfit']:
             take_profit_data = signal_data['takeProfit']
             if 'limitPrice' in take_profit_data:
-                normalized['take_profit'] = float(take_profit_data['limitPrice'])
+                normalized['take_profit'] = round(float(take_profit_data['limitPrice']), 2)
         
-        # Alternative formats for stop loss/take profit
         if 'stop_loss' in signal_data:
-            normalized['stop_loss'] = float(signal_data['stop_loss'])
+            normalized['stop_loss'] = round(float(signal_data['stop_loss']), 2)
         if 'take_profit' in signal_data:
-            normalized['take_profit'] = float(signal_data['take_profit'])
+            normalized['take_profit'] = round(float(signal_data['take_profit']), 2)
+        
+        if normalized.get('stop_loss') or normalized.get('take_profit'):
+            logger.info(f"📊 SL/TP parsed: SL=${normalized.get('stop_loss')}, TP=${normalized.get('take_profit')}")
         
         # Reference price for market order conversion (参考价格)
         if 'extras' in signal_data and 'referencePrice' in signal_data['extras']:
@@ -205,27 +239,31 @@ class SignalParser:
     
     def _validate_signal(self, signal: Dict[str, Any]) -> None:
         """Validate parsed signal"""
-        # Check required fields
         for field in self.required_fields:
             if field not in signal:
+                logger.error(f"❌ Validation failed: missing required field '{field}' in signal")
                 raise ValueError(f"Missing required field: {field}")
         
-        # Validate symbol format
         if not signal['symbol'] or len(signal['symbol']) > 20:
+            logger.error(f"❌ Validation failed: invalid symbol '{signal.get('symbol')}'")
             raise ValueError("Invalid symbol")
         
-        # Validate side
         if signal['side'] not in ['buy', 'sell']:
+            logger.error(f"❌ Validation failed: invalid side '{signal['side']}'")
             raise ValueError(f"Invalid side: {signal['side']}")
         
-        # Validate quantity
-        if signal['quantity'] <= 0:
+        if signal.get('close_all') or signal['quantity'] == 'all':
+            logger.debug(f"Quantity='all' for close signal, will resolve from position")
+        elif isinstance(signal['quantity'], (int, float)) and signal['quantity'] <= 0:
+            logger.error(f"❌ Validation failed: quantity must be positive, got {signal['quantity']}")
             raise ValueError("Quantity must be positive")
         
-        # Validate price for limit orders
         if signal.get('order_type') == 'limit':
             if 'price' not in signal or signal['price'] <= 0:
+                logger.error(f"❌ Validation failed: limit order requires positive price, got {signal.get('price')}")
                 raise ValueError("Limit orders require a positive price")
+        
+        logger.debug(f"✅ Signal validation passed: {signal['symbol']} {signal['side']} qty={signal['quantity']} type={signal.get('order_type')}")
     
     def _apply_defaults(self, signal: Dict[str, Any]) -> Dict[str, Any]:
         """Apply default values to signal"""

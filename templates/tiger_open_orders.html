@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Tiger Open Orders - Trading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="display-5 fw-bold">
+                <i class="fas fa-list-ol me-3"></i>Tiger Open Orders
+            </h1>
+            <p class="lead mb-0">Synced from Tiger API - Stop Loss / Take Profit sub-orders</p>
+        </div>
+        <div>
+            <a href="{{ url_for('tiger_open_orders', account_type=account_type, symbol=symbol_filter) }}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body py-2">
+                <form method="GET" action="{{ url_for('tiger_open_orders') }}" class="row g-2 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Account Type</label>
+                        <select name="account_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="real" {% if account_type == 'real' %}selected{% endif %}>Real Account</option>
+                            <option value="paper" {% if account_type == 'paper' %}selected{% endif %}>Paper Account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Symbol</label>
+                        <input type="text" name="symbol" class="form-control form-control-sm" placeholder="e.g. AAPL" value="{{ symbol_filter }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                    </div>
+                    {% if symbol_filter %}
+                    <div class="col-md-2">
+                        <a href="{{ url_for('tiger_open_orders', account_type=account_type) }}" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="fas fa-times me-1"></i>Clear
+                        </a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if error_msg %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>{{ error_msg }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1">Total Orders</h6>
+                <h3 class="mb-0">{{ order_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1">Stop Loss</h6>
+                <h3 class="mb-0 text-danger">{{ orders | selectattr('role', 'equalto', 'Stop Loss') | list | length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1">Take Profit</h6>
+                <h3 class="mb-0 text-success">{{ orders | selectattr('role', 'equalto', 'Take Profit') | list | length }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-3">
+                <h6 class="text-muted mb-1">Symbols</h6>
+                <h3 class="mb-0">{{ symbols | length }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if symbols and not symbol_filter %}
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex flex-wrap gap-2">
+            <span class="text-muted small me-1 pt-1">Quick filter:</span>
+            {% for sym in symbols %}
+            <a href="{{ url_for('tiger_open_orders', account_type=account_type, symbol=sym) }}" class="btn btn-outline-info btn-sm">{{ sym }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Open Orders
+                    {% if symbol_filter %}<span class="badge bg-info ms-2">{{ symbol_filter }}</span>{% endif %}
+                </h5>
+                <span class="badge bg-secondary">{{ account_type | upper }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Action</th>
+                                <th>Qty</th>
+                                <th>Trigger Price</th>
+                                <th>Limit Price</th>
+                                <th>TIF</th>
+                                <th>Outside RTH</th>
+                                <th>Status</th>
+                                <th>Parent ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                            <tr>
+                                <td><code>{{ order.id }}</code></td>
+                                <td>
+                                    <a href="{{ url_for('tiger_open_orders', account_type=account_type, symbol=order.symbol) }}" class="text-decoration-none fw-bold">
+                                        {{ order.symbol }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ order.role_class }}">{{ order.role }}</span>
+                                    <small class="text-muted d-block">{{ order.order_type }}</small>
+                                </td>
+                                <td>
+                                    {% if order.action == 'SELL' %}
+                                    <span class="text-danger fw-bold">{{ order.action }}</span>
+                                    {% else %}
+                                    <span class="text-success fw-bold">{{ order.action }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ order.quantity }}</td>
+                                <td>
+                                    {% if order.aux_price %}
+                                    <span class="text-warning">${{ '%.2f' | format(order.aux_price) }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if order.limit_price %}
+                                    ${{ '%.2f' | format(order.limit_price) }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-dark">{{ order.time_in_force }}</span></td>
+                                <td>
+                                    {% if order.outside_rth %}
+                                    <span class="badge bg-info">Yes</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ order.status }}</span>
+                                </td>
+                                <td>
+                                    {% if order.parent_id %}
+                                    <code class="small">{{ order.parent_id }}</code>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">
+                        {% if symbol_filter %}
+                        No open orders found for <strong>{{ symbol_filter }}</strong>
+                        {% else %}
+                        No open orders found for {{ account_type }} account
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

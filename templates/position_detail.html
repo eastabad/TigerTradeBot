@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Position {{ position.position_key }} - Trading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('position_list') }}">Positions</a></li>
+                <li class="breadcrumb-item active">{{ position.position_key }}</li>
+            </ol>
+        </nav>
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-layer-group me-3"></i>{{ position.position_key }}
+        </h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Side</h6>
+                {% if position.side == 'long' %}
+                <h3><span class="badge bg-success">LONG</span></h3>
+                {% else %}
+                <h3><span class="badge bg-danger">SHORT</span></h3>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Status</h6>
+                {% if position.status.value == 'open' %}
+                <h3><span class="badge bg-primary">OPEN</span></h3>
+                {% else %}
+                <h3><span class="badge bg-secondary">CLOSED</span></h3>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Quantity</h6>
+                <h3>{{ position.total_entry_quantity|int }}</h3>
+                {% if position.total_exit_quantity %}
+                <small class="text-muted">Exited: {{ position.total_exit_quantity|int }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Avg Entry</h6>
+                <h3>${{ "%.2f"|format(position.avg_entry_price or 0) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Avg Exit</h6>
+                <h3>
+                    {% if position.avg_exit_price %}
+                    ${{ "%.2f"|format(position.avg_exit_price) }}
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">P&L</h6>
+                {% if position.realized_pnl is not none %}
+                <h3 class="{{ 'text-success' if position.realized_pnl >= 0 else 'text-danger' }}">
+                    ${{ "%.2f"|format(position.realized_pnl) }}
+                </h3>
+                {% if position.pnl_percent is not none %}
+                <small class="{{ 'text-success' if position.pnl_percent >= 0 else 'text-danger' }}">
+                    {{ "%.2f"|format(position.pnl_percent) }}%
+                </small>
+                {% endif %}
+                {% else %}
+                <h3 class="text-muted">-</h3>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if holding %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-10">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2 text-info"></i>Real-time Holding Data</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 text-center">
+                        <h6 class="text-muted">Quantity</h6>
+                        <h4>{{ holding.quantity|int }}</h4>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <h6 class="text-muted">Avg Cost</h6>
+                        <h4>${{ "%.4f"|format(holding.average_cost or 0) }}</h4>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <h6 class="text-muted">Latest Price</h6>
+                        <h4 class="text-info">${{ "%.2f"|format(holding.latest_price or 0) }}</h4>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <h6 class="text-muted">Market Value</h6>
+                        <h4>${{ "%.2f"|format(holding.market_value or 0) }}</h4>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <h6 class="text-muted">Unrealized P&L</h6>
+                        {% if holding.unrealized_pnl is not none %}
+                        <h4 class="{{ 'text-success' if holding.unrealized_pnl >= 0 else 'text-danger' }}">
+                            ${{ "%.2f"|format(holding.unrealized_pnl) }}
+                        </h4>
+                        {% else %}
+                        <h4 class="text-muted">-</h4>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <h6 class="text-muted">P&L %</h6>
+                        {% if holding.unrealized_pnl_pct is not none %}
+                        <h4 class="{{ 'text-success' if holding.unrealized_pnl_pct >= 0 else 'text-danger' }}">
+                            {{ "%.2f"|format(holding.unrealized_pnl_pct) }}%
+                        </h4>
+                        {% else %}
+                        <h4 class="text-muted">-</h4>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mt-2 text-end">
+                    <small class="text-muted">Updated: {{ holding.synced_at.strftime('%Y-%m-%d %H:%M:%S') if holding.synced_at else '-' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Opened</h6>
+                <span class="fs-5">{{ position.opened_at.strftime('%Y-%m-%d %H:%M') if position.opened_at else '-' }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Closed</h6>
+                <span class="fs-5">{{ position.closed_at.strftime('%Y-%m-%d %H:%M') if position.closed_at else '-' }}</span>
+            </div>
+        </div>
+    </div>
+    {% if position.hold_duration_seconds %}
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Hold Duration</h6>
+                {% set hours = position.hold_duration_seconds // 3600 %}
+                {% set minutes = (position.hold_duration_seconds % 3600) // 60 %}
+                <span class="fs-5">{{ hours }}h {{ minutes }}m</span>
+            </div>
+        </div>
+    </div>
+    {% elif position.commission %}
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Commission</h6>
+                <span class="fs-5">${{ "%.2f"|format(position.commission) }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2 text-success"></i>Entry Orders ({{ entry_legs|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Order ID</th>
+                                <th>Price</th>
+                                <th>Qty</th>
+                                <th>Time</th>
+                                <th>Signal Grade</th>
+                                <th>Signal Indicator</th>
+                                <th>Stop Loss</th>
+                                <th>Take Profit</th>
+                                <th>OCA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leg in entry_legs %}
+                            <tr>
+                                <td>
+                                    {% if leg.leg_type.value == 'entry' %}
+                                    <span class="badge bg-success">ENTRY</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark">ADD</span>
+                                    {% endif %}
+                                </td>
+                                <td><code>{{ leg.tiger_order_id or '-' }}</code></td>
+                                <td>${{ "%.2f"|format(leg.price or 0) }}</td>
+                                <td>{{ (leg.quantity or 0)|int }}</td>
+                                <td>{{ leg.filled_at.strftime('%m/%d %H:%M') if leg.filled_at else '-' }}</td>
+                                <td>
+                                    {% if leg.signal_grade %}
+                                    <span class="badge {% if leg.signal_grade == 'A' %}bg-success{% elif leg.signal_grade == 'B' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ leg.signal_grade }}{% if leg.signal_score %} ({{ leg.signal_score }}){% endif %}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if leg.signal_indicator %}
+                                    <small>{{ leg.signal_indicator[:40] }}</small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if leg.stop_price %}
+                                    <span class="text-danger">${{ "%.2f"|format(leg.stop_price) }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if leg.take_profit_price %}
+                                    <span class="text-success">${{ "%.2f"|format(leg.take_profit_price) }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if leg.oca_group_id %}
+                                    <span class="badge bg-info">OCA#{{ leg.oca_group_id }}</span>
+                                    {% if leg.stop_order_id %}
+                                    <br><small class="text-danger">SL: {{ leg.stop_order_id }}</small>
+                                    {% endif %}
+                                    {% if leg.take_profit_order_id %}
+                                    <br><small class="text-success">TP: {{ leg.take_profit_order_id }}</small>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if leg.signal_content %}
+                            <tr>
+                                <td colspan="10" class="py-2 px-4" style="background-color: #1a1d21;">
+                                    <details>
+                                        <summary class="text-muted" style="cursor:pointer">
+                                            <i class="fas fa-code me-1"></i>Signal JSON
+                                        </summary>
+                                        <pre class="mt-2 mb-0 p-2 rounded" style="background:#0d1117; font-size:0.8em; max-height:200px; overflow:auto;">{{ leg.signal_content }}</pre>
+                                    </details>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                            {% if not entry_legs %}
+                            <tr><td colspan="10" class="text-center text-muted py-3">No entry orders</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-sign-out-alt me-2 text-danger"></i>Exit Orders ({{ exit_legs|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Exit Price</th>
+                                <th>Qty</th>
+                                <th>Time</th>
+                                <th>Exit Method</th>
+                                <th>P&L</th>
+                                <th>Commission</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leg in exit_legs %}
+                            <tr>
+                                <td><code>{{ leg.tiger_order_id or '-' }}</code></td>
+                                <td>${{ "%.2f"|format(leg.price or 0) }}</td>
+                                <td>{{ (leg.quantity or 0)|int }}</td>
+                                <td>{{ leg.filled_at.strftime('%m/%d %H:%M') if leg.filled_at else '-' }}</td>
+                                <td>
+                                    {% if leg.exit_method %}
+                                    {% set em = leg.exit_method.value %}
+                                    <span class="badge {% if em == 'stop_loss' %}bg-danger{% elif em == 'take_profit' %}bg-success{% elif em == 'trailing_stop' %}bg-warning text-dark{% elif em == 'webhook_signal' %}bg-info{% else %}bg-secondary{% endif %}">
+                                        {{ em|replace('_', ' ')|upper }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if leg.realized_pnl is not none %}
+                                    <span class="{{ 'text-success' if leg.realized_pnl >= 0 else 'text-danger' }} fw-bold">
+                                        ${{ "%.2f"|format(leg.realized_pnl) }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if leg.commission %}
+                                    ${{ "%.2f"|format(leg.commission) }}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not exit_legs %}
+                            <tr><td colspan="7" class="text-center text-muted py-3">No exit orders yet</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Complete Order Chain</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for leg in all_legs %}
+                    <div class="d-flex mb-3 align-items-start">
+                        <div class="me-3 text-center" style="min-width: 80px;">
+                            {% if leg.leg_type.value == 'entry' %}
+                            <i class="fas fa-arrow-circle-right text-success fa-2x"></i>
+                            <br><small class="text-success">ENTRY</small>
+                            {% elif leg.leg_type.value == 'add' %}
+                            <i class="fas fa-plus-circle text-warning fa-2x"></i>
+                            <br><small class="text-warning">ADD</small>
+                            {% else %}
+                            <i class="fas fa-arrow-circle-left text-danger fa-2x"></i>
+                            <br><small class="text-danger">EXIT</small>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="card" style="background-color: #1a1d21;">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>{{ position.symbol }}</strong>
+                                            <span class="text-muted ms-2">{{ (leg.quantity or 0)|int }} shares @ ${{ "%.2f"|format(leg.price or 0) }}</span>
+                                            {% if leg.tiger_order_id %}
+                                            <br><small class="text-muted">Order: {{ leg.tiger_order_id }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted">{{ leg.filled_at.strftime('%Y-%m-%d %H:%M') if leg.filled_at else '-' }}</small>
+                                            {% if leg.leg_type.value == 'exit' and leg.realized_pnl is not none %}
+                                            <br><span class="{{ 'text-success' if leg.realized_pnl >= 0 else 'text-danger' }} fw-bold">
+                                                ${{ "%.2f"|format(leg.realized_pnl) }}
+                                            </span>
+                                            {% endif %}
+                                            {% if leg.exit_method %}
+                                            <br><span class="badge bg-secondary">{{ leg.exit_method.value|replace('_', ' ') }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if leg.leg_type.value != 'exit' %}
+                                    <div class="mt-1">
+                                        {% if leg.signal_grade %}
+                                        <span class="badge {% if leg.signal_grade == 'A' %}bg-success{% elif leg.signal_grade == 'B' %}bg-warning text-dark{% else %}bg-danger{% endif %} me-1">
+                                            Grade {{ leg.signal_grade }}
+                                        </span>
+                                        {% endif %}
+                                        {% if leg.oca_group_id %}
+                                        <span class="badge bg-info me-1">OCA#{{ leg.oca_group_id }}</span>
+                                        {% endif %}
+                                        {% if leg.stop_price %}
+                                        <span class="badge bg-outline-danger me-1">SL ${{ "%.2f"|format(leg.stop_price) }}</span>
+                                        {% endif %}
+                                        {% if leg.take_profit_price %}
+                                        <span class="badge bg-outline-success">TP ${{ "%.2f"|format(leg.take_profit_price) }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

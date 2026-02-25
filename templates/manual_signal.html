@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Manual Signal Generator - Trading System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-satellite-dish me-2"></i>手动信号生成器</h5>
+            </div>
+            <div class="card-body">
+                <form id="signalForm">
+                    <div class="mb-3">
+                        <label class="form-label">股票代码 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="symbol" placeholder="如 AAPL" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">信号类型 <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <input type="radio" class="btn-check" name="signalType" id="typeLong" value="long" checked>
+                            <label class="btn btn-outline-success" for="typeLong"><i class="fas fa-arrow-up me-1"></i>做多 (Long)</label>
+
+                            <input type="radio" class="btn-check" name="signalType" id="typeCloseLong" value="close_long">
+                            <label class="btn btn-outline-warning" for="typeCloseLong"><i class="fas fa-times-circle me-1"></i>平多 (Close Long)</label>
+
+                            <input type="radio" class="btn-check" name="signalType" id="typeShort" value="short">
+                            <label class="btn btn-outline-danger" for="typeShort"><i class="fas fa-arrow-down me-1"></i>做空 (Short)</label>
+
+                            <input type="radio" class="btn-check" name="signalType" id="typeCloseShort" value="close_short">
+                            <label class="btn btn-outline-info" for="typeCloseShort"><i class="fas fa-times-circle me-1"></i>平空 (Close Short)</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">限价 <small class="text-muted">(留空则使用市价单)</small></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="limitPrice" step="0.01" min="0.01" placeholder="留空=市价单">
+                            <button type="button" class="btn btn-outline-secondary" id="btnFetchPrice" title="获取当前价格(含盘前盘后)">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" id="currentPriceHint"></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">目标账户 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="targetAccount" required>
+                            <option value="">-- 选择目标账户 --</option>
+                            <option value="real">Real (50904193)</option>
+                            <option value="paper">Paper (21994480083284213)</option>
+                            <option value="both">Both (双账户)</option>
+                        </select>
+                    </div>
+
+                    <div class="row" id="slTpRow">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">止损价</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="stopLoss" step="0.01" min="0" placeholder="止损价格">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">止盈价</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="takeProfit" step="0.01" min="0" placeholder="止盈价格">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">数量 <small class="text-muted" id="quantityHint">(开仓数量)</small></label>
+                        <input type="number" class="form-control" id="quantity" value="100" min="1" step="1">
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-secondary" id="btnReset"><i class="fas fa-undo me-1"></i>重置</button>
+                        <button type="button" class="btn btn-primary flex-grow-1" id="btnSend"><i class="fas fa-rocket me-1"></i>发送信号</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-code me-2"></i>JSON 预览</h5>
+            </div>
+            <div class="card-body">
+                <pre id="jsonPreview" class="bg-dark text-light p-3 rounded" style="min-height: 200px; max-height: 500px; overflow-y: auto; font-size: 0.85rem;"></pre>
+            </div>
+        </div>
+
+        <div class="card" id="resultCard" style="display:none;">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>发送结果</h5>
+            </div>
+            <div class="card-body">
+                <pre id="sendResult" class="p-3 rounded" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem;"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const form = document.getElementById('signalForm');
+    const symbolInput = document.getElementById('symbol');
+    const limitPriceInput = document.getElementById('limitPrice');
+    const targetAccountSelect = document.getElementById('targetAccount');
+    const stopLossInput = document.getElementById('stopLoss');
+    const takeProfitInput = document.getElementById('takeProfit');
+    const quantityInput = document.getElementById('quantity');
+    const jsonPreview = document.getElementById('jsonPreview');
+    const btnFetchPrice = document.getElementById('btnFetchPrice');
+    const btnReset = document.getElementById('btnReset');
+    const btnSend = document.getElementById('btnSend');
+    const currentPriceHint = document.getElementById('currentPriceHint');
+    const slTpRow = document.getElementById('slTpRow');
+    const resultCard = document.getElementById('resultCard');
+    const sendResult = document.getElementById('sendResult');
+    const quantityHint = document.getElementById('quantityHint');
+
+    function getSignalType() {
+        return document.querySelector('input[name="signalType"]:checked').value;
+    }
+
+    function isCloseSignal() {
+        const t = getSignalType();
+        return t === 'close_long' || t === 'close_short';
+    }
+
+    function toggleSlTp() {
+        if (isCloseSignal()) {
+            slTpRow.style.display = 'none';
+            stopLossInput.value = '';
+            takeProfitInput.value = '';
+            quantityHint.textContent = '(留空=全部平仓, 或指定数量)';
+            quantityInput.placeholder = '留空=全部平仓';
+            quantityInput.value = '';
+            quantityInput.removeAttribute('required');
+        } else {
+            slTpRow.style.display = '';
+            quantityHint.textContent = '(开仓数量)';
+            quantityInput.placeholder = '';
+            if (!quantityInput.value) quantityInput.value = '100';
+        }
+    }
+
+    document.querySelectorAll('input[name="signalType"]').forEach(function(r) {
+        r.addEventListener('change', function() {
+            toggleSlTp();
+            updatePreview();
+        });
+    });
+
+    function buildPayload() {
+        const signalType = getSignalType();
+        const symbol = symbolInput.value.trim().toUpperCase();
+        const price = parseFloat(limitPriceInput.value);
+        const hasPrice = limitPriceInput.value.trim() !== '' && !isNaN(price) && price > 0;
+        const qty = parseInt(quantityInput.value) || 100;
+        const sl = parseFloat(stopLossInput.value);
+        const tp = parseFloat(takeProfitInput.value);
+
+        var payload = {
+            symbol: symbol || 'AAPL',
+            extras: {
+                indicator: 'platform input',
+                referencePrice: hasPrice ? price : 0
+            }
+        };
+
+        if (signalType === 'long') {
+            payload.side = 'buy';
+            payload.quantity = qty;
+            payload.order_type = hasPrice ? 'limit' : 'market';
+            if (hasPrice) payload.price = price;
+            if (sl) payload.stop_loss = sl;
+            if (tp) payload.take_profit = tp;
+        } else if (signalType === 'close_long') {
+            payload.sentiment = 'flat';
+            payload.side = 'sell';
+            payload.quantity = qty > 0 ? qty : 'all';
+            payload.order_type = hasPrice ? 'limit' : 'market';
+            if (hasPrice) payload.price = price;
+        } else if (signalType === 'short') {
+            payload.side = 'sell';
+            payload.quantity = qty;
+            payload.order_type = hasPrice ? 'limit' : 'market';
+            if (hasPrice) payload.price = price;
+            if (sl) payload.stop_loss = sl;
+            if (tp) payload.take_profit = tp;
+        } else if (signalType === 'close_short') {
+            payload.sentiment = 'flat';
+            payload.side = 'buy';
+            payload.quantity = qty > 0 ? qty : 'all';
+            payload.order_type = hasPrice ? 'limit' : 'market';
+            if (hasPrice) payload.price = price;
+        }
+
+        return payload;
+    }
+
+    function updatePreview() {
+        var payload = buildPayload();
+        var account = targetAccountSelect.value;
+        var endpoint = '/webhook';
+        if (account === 'paper') endpoint = '/webhook_paper';
+        else if (account === 'both') endpoint = '/webhook_both';
+
+        var display = {
+            endpoint: endpoint,
+            payload: payload
+        };
+        jsonPreview.textContent = JSON.stringify(display, null, 2);
+    }
+
+    [symbolInput, limitPriceInput, targetAccountSelect, stopLossInput, takeProfitInput, quantityInput].forEach(function(el) {
+        el.addEventListener('input', updatePreview);
+        el.addEventListener('change', updatePreview);
+    });
+
+    btnFetchPrice.addEventListener('click', function() {
+        var symbol = symbolInput.value.trim().toUpperCase();
+        if (!symbol) {
+            currentPriceHint.textContent = '请先输入股票代码';
+            currentPriceHint.className = 'text-warning';
+            return;
+        }
+        btnFetchPrice.disabled = true;
+        btnFetchPrice.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        currentPriceHint.textContent = '获取中...';
+
+        fetch('/api/current_price/' + encodeURIComponent(symbol))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.price) {
+                    limitPriceInput.value = data.price;
+                    var sessionLabel = '';
+                    if (data.session === 'pre_market') sessionLabel = ' [盘前]';
+                    else if (data.session === 'post_market') sessionLabel = ' [盘后]';
+                    else if (data.session === 'regular') sessionLabel = ' [盘中]';
+                    currentPriceHint.textContent = '当前价: $' + data.price + sessionLabel + ' (' + data.source + ')';
+                    currentPriceHint.className = 'text-success';
+                    updatePreview();
+                } else {
+                    currentPriceHint.textContent = '获取失败: ' + (data.error || '未知错误');
+                    currentPriceHint.className = 'text-danger';
+                }
+            })
+            .catch(function(err) {
+                currentPriceHint.textContent = '网络错误';
+                currentPriceHint.className = 'text-danger';
+            })
+            .finally(function() {
+                btnFetchPrice.disabled = false;
+                btnFetchPrice.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            });
+    });
+
+    btnReset.addEventListener('click', function() {
+        symbolInput.value = '';
+        limitPriceInput.value = '';
+        stopLossInput.value = '';
+        takeProfitInput.value = '';
+        quantityInput.value = '100';
+        targetAccountSelect.value = '';
+        document.getElementById('typeLong').checked = true;
+        currentPriceHint.textContent = '';
+        resultCard.style.display = 'none';
+        toggleSlTp();
+        updatePreview();
+    });
+
+    btnSend.addEventListener('click', function() {
+        var symbol = symbolInput.value.trim().toUpperCase();
+        var price = parseFloat(limitPriceInput.value);
+        var hasPrice = limitPriceInput.value.trim() !== '' && !isNaN(price) && price > 0;
+        var account = targetAccountSelect.value;
+
+        if (!symbol) { alert('请输入股票代码'); return; }
+        if (!account) { alert('请选择目标账户'); return; }
+
+        var priceText = hasPrice ? '@ $' + price : '(市价单)';
+        if (!confirm('确认发送信号?\n\n' + getSignalType().toUpperCase() + ' ' + symbol + ' ' + priceText + '\n目标: ' + account)) {
+            return;
+        }
+
+        btnSend.disabled = true;
+        btnSend.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>发送中...';
+
+        var payload = buildPayload();
+        if (hasPrice) payload.extras.referencePrice = price;
+
+        var endpoints = [];
+        if (account === 'real') endpoints = ['/webhook'];
+        else if (account === 'paper') endpoints = ['/webhook_paper'];
+        else if (account === 'both') endpoints = ['/webhook_both'];
+
+        var results = [];
+        var pending = endpoints.length;
+
+        endpoints.forEach(function(ep) {
+            fetch(ep, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(function(r) { return r.json().then(function(d) { return { status: r.status, data: d }; }); })
+            .then(function(res) {
+                results.push({ endpoint: ep, status: res.status, response: res.data });
+            })
+            .catch(function(err) {
+                results.push({ endpoint: ep, error: err.message });
+            })
+            .finally(function() {
+                pending--;
+                if (pending === 0) {
+                    resultCard.style.display = '';
+                    var allOk = results.every(function(r) { return r.response && r.response.success; });
+                    sendResult.className = allOk ? 'bg-success bg-opacity-10 text-light p-3 rounded' : 'bg-danger bg-opacity-10 text-light p-3 rounded';
+                    sendResult.textContent = JSON.stringify(results, null, 2);
+                    btnSend.disabled = false;
+                    btnSend.innerHTML = '<i class="fas fa-rocket me-1"></i>发送信号';
+                }
+            });
+        });
+    });
+
+    toggleSlTp();
+    updatePreview();
+})();
+</script>
+{% endblock %}

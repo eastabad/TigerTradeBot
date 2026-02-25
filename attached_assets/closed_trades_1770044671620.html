@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Closed Trades - Trading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-money-bill-wave me-3"></i>Closed Trades P&L
+        </h1>
+        <p class="lead">View realized profit and loss for completed trades (已平仓交易盈亏)</p>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('closed_trades') }}" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Account Type</label>
+                        <select name="account_type" class="form-select">
+                            <option value="real" {% if account_type == 'real' %}selected{% endif %}>Real Account</option>
+                            <option value="paper" {% if account_type == 'paper' %}selected{% endif %}>Paper Account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Symbol</label>
+                        <input type="text" name="symbol" class="form-control" placeholder="e.g., TSLA" value="{{ symbol_filter or '' }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                        <a href="{{ url_for('closed_trades') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total P&L</h6>
+                <h3 class="mb-0 {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(total_pnl) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Commission</h6>
+                <h3 class="mb-0 text-warning">${{ "%.2f"|format(total_commission) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Buy Orders</h6>
+                <h3 class="mb-0 text-info">{{ buy_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Sell Orders</h6>
+                <h3 class="mb-0 text-info">{{ sell_count }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orders Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Closed Orders ({{ orders|length }})</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Trade Time</th>
+                                    <th>Symbol</th>
+                                    <th>Action</th>
+                                    <th>Quantity</th>
+                                    <th>Avg Fill Price</th>
+                                    <th>Avg Cost</th>
+                                    <th>Realized P&L</th>
+                                    <th>Commission</th>
+                                    <th>Order Type</th>
+                                    <th>Order ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted" style="font-family: 'Roboto Mono', monospace;">
+                                            {{ order.trade_time_str }}
+                                        </small>
+                                    </td>
+                                    <td><strong>{{ order.symbol }}</strong></td>
+                                    <td>
+                                        {% if 'BUY' in order.action|upper %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-arrow-up me-1"></i>BUY
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-arrow-down me-1"></i>SELL
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">{{ order.filled }}</td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.avg_fill_price %}
+                                            ${{ "%.2f"|format(order.avg_fill_price) }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.avg_cost %}
+                                            ${{ "%.2f"|format(order.avg_cost) }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.realized_pnl != 0 %}
+                                            <span class="{% if order.realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                {% if order.realized_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(order.realized_pnl) }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.commission %}
+                                            <span class="text-warning">${{ "%.2f"|format(order.commission) }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ order.order_type }}</span>
+                                    </td>
+                                    <td>
+                                        <code style="font-size: 0.75rem;">{{ order.order_id }}</code>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No closed trades found</h4>
+                        <p class="text-muted">
+                            Adjust your filter criteria or wait for trades to be completed.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Net P&L Card -->
+{% if orders %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card {% if total_pnl >= 0 %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-body text-center">
+                <h5 class="card-title">Net Profit/Loss (After Commission)</h5>
+                <h2 class="{% if (total_pnl - total_commission) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% set net_pnl = total_pnl - total_commission %}
+                    {% if net_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(net_pnl) }}
+                </h2>
+                <p class="text-muted mb-0">
+                    Gross P&L: ${{ "%.2f"|format(total_pnl) }} | Commission: ${{ "%.2f"|format(total_commission) }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Closed Trades page initialized');
+});
+</script>
+{% endblock %}

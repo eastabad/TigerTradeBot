@@ -1,0 +1,204 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Settings{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="fas fa-cog me-2"></i>Alpaca Settings</h4>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-key me-2"></i>API Connection</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">API Key</label>
+                    <div class="d-flex align-items-center">
+                        {% if has_api_key %}
+                        <span class="badge bg-success me-2"><i class="fas fa-check"></i></span>
+                        <span class="text-success">Configured</span>
+                        {% else %}
+                        <span class="badge bg-danger me-2"><i class="fas fa-times"></i></span>
+                        <span class="text-danger">Not configured</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Secret Key</label>
+                    <div class="d-flex align-items-center">
+                        {% if has_secret_key %}
+                        <span class="badge bg-success me-2"><i class="fas fa-check"></i></span>
+                        <span class="text-success">Configured</span>
+                        {% else %}
+                        <span class="badge bg-danger me-2"><i class="fas fa-times"></i></span>
+                        <span class="text-danger">Not configured</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Account Type</label>
+                    <div><span class="badge bg-warning text-dark">PAPER</span></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Base URL</label>
+                    <div class="monospace small text-muted">https://paper-api.alpaca.markets</div>
+                </div>
+                <div class="alert alert-info small mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    API keys are managed through Secrets. Use the Secrets panel to update them.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-satellite-dish me-2"></i>Webhook Info</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Webhook URL</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-sm monospace" 
+                               value="{{ request.host_url }}alpaca/webhook" readonly id="webhook-url">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('webhook-url').value)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Signal Format (JSON)</label>
+                    <pre class="bg-dark p-2 rounded small mb-0"><code>{
+  "symbol": "AAPL",
+  "side": "buy",
+  "quantity": 10,
+  "price": 150.00,
+  "order_type": "limit",
+  "stop_loss": 145.00,
+  "take_profit": 160.00
+}</code></pre>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Close Signal</label>
+                    <pre class="bg-dark p-2 rounded small mb-0"><code>{
+  "symbol": "AAPL",
+  "sentiment": "flat"
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Trailing Stop Config</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">ATR Multiplier</label>
+                            <input type="number" step="0.1" name="config_ts_atr_multiplier" 
+                                   class="form-control form-control-sm" value="{{ ts_config.atr_multiplier }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">ATR Period</label>
+                            <input type="number" name="config_ts_atr_period" 
+                                   class="form-control form-control-sm" value="{{ ts_config.atr_period }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Trail %</label>
+                            <input type="number" step="0.001" name="config_ts_trail_pct" 
+                                   class="form-control form-control-sm" value="{{ ts_config.trail_pct }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Initial Stop %</label>
+                            <input type="number" step="0.001" name="config_ts_initial_stop_pct" 
+                                   class="form-control form-control-sm" value="{{ ts_config.initial_stop_pct }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Check Interval (sec)</label>
+                            <input type="number" name="config_ts_check_interval" 
+                                   class="form-control form-control-sm" value="{{ ts_config.check_interval_seconds }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Enabled</label>
+                            <select name="config_ts_enabled" class="form-select form-select-sm">
+                                <option value="true" {% if ts_config.is_enabled %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if not ts_config.is_enabled %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm mt-3">Save Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Trading Parameters</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Default Quantity</label>
+                            <input type="number" name="config_default_quantity" 
+                                   class="form-control form-control-sm" 
+                                   value="{{ configs.get('default_quantity', '1') }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Default Order Type</label>
+                            <select name="config_default_order_type" class="form-select form-select-sm">
+                                <option value="limit" {% if configs.get('default_order_type') == 'limit' %}selected{% endif %}>Limit</option>
+                                <option value="market" {% if configs.get('default_order_type') == 'market' %}selected{% endif %}>Market</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Auto OCO Protection</label>
+                            <select name="config_auto_oco" class="form-select form-select-sm">
+                                <option value="true" {% if configs.get('auto_oco', 'true') == 'true' %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if configs.get('auto_oco') == 'false' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Auto Trailing Stop</label>
+                            <select name="config_auto_trailing_stop" class="form-select form-select-sm">
+                                <option value="true" {% if configs.get('auto_trailing_stop', 'true') == 'true' %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if configs.get('auto_trailing_stop') == 'false' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm mt-3">Save Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-2">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger bg-opacity-10">
+                <h6 class="mb-0 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Danger Zone</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">Clear all Alpaca trading data (positions, orders, trades, logs). Configuration settings will be preserved.</p>
+                <form method="post" action="{{ url_for('alpaca.alpaca_reset_all_data') }}" 
+                      onsubmit="return confirm('Are you sure you want to delete ALL Alpaca data? This cannot be undone.')">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash me-1"></i>Clear All Alpaca Data
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

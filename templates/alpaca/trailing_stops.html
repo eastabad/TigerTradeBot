@@ -1,0 +1,571 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Trailing Stop Monitor - Alpaca{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Trailing Stop Monitor</h4>
+    <div class="d-flex align-items-center">
+        <span id="live-indicator" class="live-indicator" style="display:none;" title="实时更新中"></span>
+        <span id="last-update-time" class="text-muted me-2" style="font-size:12px;"></span>
+        <button id="auto-refresh-btn" class="btn btn-sm btn-outline-info me-2" onclick="toggleLiveUpdate()">
+            <i class="fas fa-sync-alt me-1"></i>开启实时更新
+        </button>
+        <form method="post" action="{{ url_for('alpaca.alpaca_run_trailing_stop_cycle') }}" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-sync me-1"></i>Run Cycle
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card neutral">
+            <div class="card-body py-2">
+                <div class="small text-muted">Active Stops</div>
+                <div class="h5 mb-0">{{ active_stops|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body py-2">
+                <div class="small text-muted">Active OCOs</div>
+                <div class="h5 mb-0">{{ active_ocos|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if scheduler_status.running %}profit{% else %}loss{% endif %}">
+            <div class="card-body py-2">
+                <div class="small text-muted">Scheduler</div>
+                <div class="h5 mb-0">
+                    {% if scheduler_status.running %}
+                    <span class="text-profit">Running</span>
+                    {% else %}
+                    <span class="text-loss">Stopped</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body py-2">
+                <div class="small text-muted">Config</div>
+                <div class="h5 mb-0">
+                    {% if ts_config and ts_config.is_enabled %}
+                    <span class="text-profit">Enabled</span>
+                    {% else %}
+                    <span class="text-loss">Disabled</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="active-stops-card" class="card mb-4" {% if not active_stops %}style="display:none;"{% endif %}>
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-play-circle me-2 text-success"></i>Active Trailing Stops (<span id="active-stops-count">{{ active_stops|length }}</span>)</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Entry</th>
+                        <th>Current</th>
+                        <th>Highest</th>
+                        <th>Stop</th>
+                        <th>Phase</th>
+                        <th>Profit%</th>
+                        <th>Qty</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="active-stops-tbody">
+                    {% for ts in active_stops %}
+                    <tr data-ts-id="{{ ts.id }}">
+                        <td>
+                            <a href="{{ url_for('alpaca.alpaca_trailing_stop_detail', ts_id=ts.id) }}" class="text-decoration-none fw-bold">
+                                {{ ts.symbol }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if ts.side == 'long' %}
+                            <span class="badge bg-success">LONG</span>
+                            {% else %}
+                            <span class="badge bg-danger">SHORT</span>
+                            {% endif %}
+                        </td>
+                        <td class="monospace">${{ "%.2f"|format(ts.entry_price) }}</td>
+                        <td class="monospace cell-current-price">
+                            {% if ts.current_price %}
+                            <strong class="text-primary">${{ "%.2f"|format(ts.current_price) }}</strong>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="monospace cell-highest">
+                            {% if ts.highest_price %}
+                            ${{ "%.2f"|format(ts.highest_price) }}
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="monospace cell-stop">
+                            {% if ts.trailing_stop_price %}
+                            <span class="text-warning">${{ "%.2f"|format(ts.trailing_stop_price) }}</span>
+                            {% elif ts.stop_loss_price %}
+                            <span class="text-muted">${{ "%.2f"|format(ts.stop_loss_price) }}</span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="cell-phase">
+                            {% if ts.phase == 'dynamic' %}
+                            <span class="badge bg-info">Dynamic</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Progressive</span>
+                            {% endif %}
+                        </td>
+                        <td class="monospace cell-profit">
+                            {% if ts.current_price and ts.entry_price %}
+                                {% set pnl_pct = ((ts.current_price - ts.entry_price) / ts.entry_price * 100) if ts.side == 'long' else ((ts.entry_price - ts.current_price) / ts.entry_price * 100) %}
+                                <span class="{{ 'text-profit' if pnl_pct >= 0 else 'text-loss' }}">
+                                    {{ "%.2f"|format(pnl_pct) }}%
+                                </span>
+                            {% else %}<span class="text-muted">-</span>{% endif %}
+                        </td>
+                        <td class="monospace">{{ "%.0f"|format(ts.quantity) if ts.quantity == ts.quantity|int else ts.quantity }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('alpaca.alpaca_deactivate_trailing_stop', ts_id=ts.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deactivate trailing stop for {{ ts.symbol }}?')">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                            </form>
+                            <a href="{{ url_for('alpaca.alpaca_trailing_stop_detail', ts_id=ts.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if active_ocos %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-link me-2 text-info"></i>Active OCO Orders ({{ active_ocos|length }})</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Entry</th>
+                        <th>Stop Loss</th>
+                        <th>Take Profit</th>
+                        <th>Qty</th>
+                        <th>TIF</th>
+                        <th>Modified</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for oco in active_ocos %}
+                    <tr>
+                        <td class="fw-bold">{{ oco.symbol }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if oco.side == 'long' else 'bg-danger' }}">
+                                {{ oco.side|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace">
+                            {% if oco.entry_price %}${{ "%.2f"|format(oco.entry_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace text-loss">
+                            {% if oco.stop_price %}${{ "%.2f"|format(oco.stop_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace text-profit">
+                            {% if oco.take_profit_price %}${{ "%.2f"|format(oco.take_profit_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">{{ "%.0f"|format(oco.quantity) }}</td>
+                        <td><span class="badge bg-secondary">{{ oco.time_in_force|upper }}</span></td>
+                        <td>{{ oco.modify_count }}x</td>
+                        <td class="small text-muted">{{ oco.created_at.strftime('%m/%d %H:%M') if oco.created_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not active_stops and not active_ocos %}
+<div class="card mb-4">
+    <div class="card-body text-center text-muted py-5">
+        <i class="fas fa-shield-alt fa-3x mb-3 opacity-50"></i>
+        <p>No active trailing stops or OCO orders</p>
+        <p class="small">Trailing stops and OCO protection are created automatically when entry orders are filled.</p>
+    </div>
+</div>
+{% endif %}
+
+{% if recent_logs %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-history me-2"></i>Recent Events</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>TS ID</th>
+                        <th>Event</th>
+                        <th>Price</th>
+                        <th>Stop</th>
+                        <th>Profit%</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td class="small text-muted">{{ log.created_at.strftime('%m/%d %H:%M:%S') if log.created_at else '-' }}</td>
+                        <td>
+                            <strong>{{ log.trailing_stop.symbol if log.trailing_stop else '-' }}</strong>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('alpaca.alpaca_trailing_stop_detail', ts_id=log.trailing_stop_id) }}" class="text-decoration-none">
+                                #{{ log.trailing_stop_id }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if log.event_type == 'triggered' %}
+                            <span class="badge bg-danger">Triggered</span>
+                            {% elif log.event_type == 'stop_raised' %}
+                            <span class="badge bg-success">Stop Raised</span>
+                            {% elif log.event_type == 'dynamic_switch' %}
+                            <span class="badge bg-info">Dynamic Switch</span>
+                            {% elif log.event_type == 'created' %}
+                            <span class="badge bg-primary">Created</span>
+                            {% elif log.event_type == 'deactivated' %}
+                            <span class="badge bg-secondary">Deactivated</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.event_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.current_price %}${{ "%.2f"|format(log.current_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.trailing_stop_price %}${{ "%.2f"|format(log.trailing_stop_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.profit_pct is not none %}
+                            <span class="{{ 'text-profit' if log.profit_pct >= 0 else 'text-loss' }}">
+                                {{ "%.2f"|format(log.profit_pct) }}%
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="small text-muted text-truncate" style="max-width: 200px;">{{ log.details or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if inactive_stops %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-history me-2 text-muted"></i>Recent Inactive Stops</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Entry</th>
+                        <th>Last Price</th>
+                        <th>Phase</th>
+                        <th>Qty</th>
+                        <th>Closed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ts in inactive_stops %}
+                    <tr class="text-muted">
+                        <td>
+                            <a href="{{ url_for('alpaca.alpaca_trailing_stop_detail', ts_id=ts.id) }}" class="text-decoration-none">
+                                {{ ts.symbol }}
+                            </a>
+                        </td>
+                        <td>{{ ts.side|upper }}</td>
+                        <td class="monospace">${{ "%.2f"|format(ts.entry_price) }}</td>
+                        <td class="monospace">
+                            {% if ts.current_price %}${{ "%.2f"|format(ts.current_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td>{{ ts.phase }}</td>
+                        <td class="monospace">{{ "%.0f"|format(ts.quantity) if ts.quantity == ts.quantity|int else ts.quantity }}</td>
+                        <td class="small">{{ ts.updated_at.strftime('%m/%d %H:%M') if ts.updated_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Scheduler Info</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="small text-muted">Status</div>
+                <div>
+                    {% if scheduler_status.running %}
+                    <span class="badge bg-success">Running</span>
+                    {% else %}
+                    <span class="badge bg-danger">Stopped</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Market Open</div>
+                <div>
+                    {% if scheduler_status.get('market_open') %}
+                    <span class="badge bg-success">Yes</span>
+                    {% else %}
+                    <span class="badge bg-secondary">No</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="small text-muted">Last Run</div>
+                <div class="small">{{ scheduler_status.get('last_run', 'N/A') }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% set ws = scheduler_status.get('trade_stream', {}) %}
+<div class="card mt-2">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-plug me-2"></i>Alpaca Trade Stream (WebSocket)</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="small text-muted">Connection</div>
+                <div>
+                    {% if ws.get('authenticated') %}
+                    <span class="badge bg-success">Connected</span>
+                    {% elif ws.get('connected') %}
+                    <span class="badge bg-warning">Connecting...</span>
+                    {% elif ws.get('running') %}
+                    <span class="badge bg-info">Reconnecting</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Off</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Events Received</div>
+                <div class="h6 mb-0">{{ ws.get('event_count', 0) }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Last Event</div>
+                <div class="small">{{ ws.get('last_event_time', 'None') or 'None' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Reconnects / Queue</div>
+                <div class="small">{{ ws.get('reconnect_count', 0) }} / {{ ws.get('queue_size', 0) }}</div>
+            </div>
+        </div>
+        {% if ws.get('last_error') %}
+        <div class="mt-2">
+            <div class="small text-muted">Last Error</div>
+            <div class="small text-danger">{{ ws.get('last_error') }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+@keyframes flash-green {
+    0% { background-color: transparent; }
+    30% { background-color: rgba(25, 135, 84, 0.3); }
+    100% { background-color: transparent; }
+}
+@keyframes flash-red {
+    0% { background-color: transparent; }
+    30% { background-color: rgba(220, 53, 69, 0.3); }
+    100% { background-color: transparent; }
+}
+.flash-up { animation: flash-green 1.2s ease-out; }
+.flash-down { animation: flash-red 1.2s ease-out; }
+.live-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #198754;
+    margin-right: 6px;
+    animation: pulse-live 2s infinite;
+}
+@keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+</style>
+
+<script>
+var previousData = {};
+var liveUpdateInterval = null;
+var LIVE_INTERVAL_MS = 5000;
+
+function fmt(val) {
+    return val !== null && val !== undefined ? val.toFixed(2) : null;
+}
+
+function updateCellWithFlash(cell, newHtml, oldVal, newVal) {
+    if (cell.innerHTML.trim() === newHtml.trim()) return;
+    cell.innerHTML = newHtml;
+    if (oldVal !== null && oldVal !== undefined && newVal !== null && newVal !== undefined && oldVal !== newVal) {
+        cell.classList.remove('flash-up', 'flash-down');
+        void cell.offsetWidth;
+        cell.classList.add(newVal > oldVal ? 'flash-up' : 'flash-down');
+    }
+}
+
+function refreshStopsData() {
+    fetch('{{ url_for("alpaca.api_alpaca_trailing_stops_data") }}')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) return;
+
+            var stops = data.stops;
+            var countEl = document.getElementById('active-stops-count');
+            var card = document.getElementById('active-stops-card');
+            var tbody = document.getElementById('active-stops-tbody');
+
+            if (countEl) countEl.textContent = stops.length;
+
+            if (stops.length === 0) {
+                if (card) card.style.display = 'none';
+                return;
+            }
+            if (card) card.style.display = '';
+
+            var existingRows = {};
+            if (tbody) {
+                tbody.querySelectorAll('tr[data-ts-id]').forEach(function(row) {
+                    existingRows[row.getAttribute('data-ts-id')] = row;
+                });
+            }
+
+            stops.forEach(function(ts) {
+                var prev = previousData[ts.id] || {};
+                var row = existingRows[ts.id];
+                if (!row) return;
+
+                var cp = ts.current_price;
+                if (cp === null && prev.current_price !== undefined) cp = prev.current_price;
+
+                var priceHtml = cp !== null
+                    ? '<strong class="text-primary">$' + fmt(cp) + '</strong>'
+                    : '<span class="text-muted">-</span>';
+
+                var highHtml = ts.highest_price !== null
+                    ? '$' + fmt(ts.highest_price)
+                    : '<span class="text-muted">-</span>';
+
+                var stopHtml;
+                if (ts.trailing_stop_price !== null) {
+                    stopHtml = '<span class="text-warning">$' + fmt(ts.trailing_stop_price) + '</span>';
+                } else if (ts.stop_loss_price !== null) {
+                    stopHtml = '<span class="text-muted">$' + fmt(ts.stop_loss_price) + '</span>';
+                } else {
+                    stopHtml = '<span class="text-muted">-</span>';
+                }
+
+                var phaseHtml = ts.phase === 'dynamic'
+                    ? '<span class="badge bg-info">Dynamic</span>'
+                    : '<span class="badge bg-secondary">Progressive</span>';
+
+                var pp = ts.profit_pct;
+                if (pp === null && prev.profit_pct !== undefined) pp = prev.profit_pct;
+                var profitHtml;
+                if (pp !== null) {
+                    var cls = pp >= 0 ? 'text-profit' : 'text-loss';
+                    var sign = pp >= 0 ? '+' : '';
+                    profitHtml = '<span class="' + cls + '">' + sign + fmt(pp) + '%</span>';
+                } else {
+                    profitHtml = '<span class="text-muted">-</span>';
+                }
+
+                var cellPrice = row.querySelector('.cell-current-price');
+                var cellHigh = row.querySelector('.cell-highest');
+                var cellStop = row.querySelector('.cell-stop');
+                var cellPhase = row.querySelector('.cell-phase');
+                var cellProfit = row.querySelector('.cell-profit');
+
+                if (cellPrice) updateCellWithFlash(cellPrice, priceHtml, prev.current_price, cp);
+                if (cellHigh) updateCellWithFlash(cellHigh, highHtml, prev.highest_price, ts.highest_price);
+                if (cellStop) updateCellWithFlash(cellStop, stopHtml, prev.trailing_stop_price, ts.trailing_stop_price);
+                if (cellPhase) cellPhase.innerHTML = phaseHtml;
+                if (cellProfit) updateCellWithFlash(cellProfit, profitHtml, prev.profit_pct, pp);
+
+                previousData[ts.id] = {
+                    current_price: cp,
+                    highest_price: ts.highest_price,
+                    trailing_stop_price: ts.trailing_stop_price,
+                    profit_pct: pp
+                };
+            });
+
+            var updateTime = document.getElementById('last-update-time');
+            if (updateTime) updateTime.textContent = new Date().toLocaleTimeString();
+        })
+        .catch(function(e) {
+            console.error('Live update error:', e);
+        });
+}
+
+function toggleLiveUpdate() {
+    var btn = document.getElementById('auto-refresh-btn');
+    var indicator = document.getElementById('live-indicator');
+    if (liveUpdateInterval) {
+        clearInterval(liveUpdateInterval);
+        liveUpdateInterval = null;
+        btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>开启实时更新';
+        btn.classList.remove('btn-info');
+        btn.classList.add('btn-outline-info');
+        if (indicator) indicator.style.display = 'none';
+    } else {
+        refreshStopsData();
+        liveUpdateInterval = setInterval(refreshStopsData, LIVE_INTERVAL_MS);
+        btn.innerHTML = '<i class="fas fa-pause me-1"></i>暂停实时更新';
+        btn.classList.remove('btn-outline-info');
+        btn.classList.add('btn-info');
+        if (indicator) indicator.style.display = 'inline-block';
+    }
+}
+</script>
+{% endblock %}

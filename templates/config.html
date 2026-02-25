@@ -8,52 +8,13 @@
         <h1 class="display-5 fw-bold">
             <i class="fas fa-cog me-3"></i>System Configuration
         </h1>
-        <p class="lead">Configure your Tiger Securities API credentials and trading parameters.</p>
+        <p class="lead">Configure trading parameters and notification settings.</p>
     </div>
 </div>
 
 <form method="POST" id="config-form">
     <div class="row">
-        <!-- API Configuration -->
         <div class="col-md-8">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-key me-2"></i>Tiger Securities API Configuration
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="tiger-api-key" class="form-label">
-                            Tiger API Key <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="tiger-api-key" name="TIGER_API_KEY" 
-                               value="{{ configs.TIGER_API_KEY or '' }}" required>
-                        <div class="form-text">Your Tiger Securities API key (Tiger ID)</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="tiger-secret-key" class="form-label">
-                            Private Key <span class="text-danger">*</span>
-                        </label>
-                        <textarea class="form-control" id="tiger-secret-key" name="TIGER_SECRET_KEY" 
-                                  rows="8" required placeholder="-----BEGIN RSA PRIVATE KEY-----
-...
------END RSA PRIVATE KEY-----">{{ configs.TIGER_SECRET_KEY or '' }}</textarea>
-                        <div class="form-text">Your RSA private key for API authentication</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="tiger-account" class="form-label">
-                            Trading Account <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="tiger-account" name="TIGER_ACCOUNT" 
-                               value="{{ configs.TIGER_ACCOUNT or '' }}" required>
-                        <div class="form-text">Your Tiger Securities trading account number</div>
-                    </div>
-                </div>
-            </div>
-            
             <!-- Trading Parameters -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -67,7 +28,7 @@
                             Maximum Trade Amount (USD)
                         </label>
                         <input type="number" class="form-control" id="max-trade-amount" 
-                               name="MAX_TRADE_AMOUNT" value="{{ configs.MAX_TRADE_AMOUNT or '10000' }}" 
+                               name="MAX_TRADE_AMOUNT" value="{{ configs.MAX_TRADE_AMOUNT or '1000000' }}" 
                                step="100" min="1">
                         <div class="form-text">Maximum allowed amount per trade for risk management</div>
                     </div>
@@ -113,67 +74,25 @@
                     <button type="submit" class="btn btn-primary btn-lg">
                         <i class="fas fa-save me-2"></i>Save Configuration
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-lg ms-2" onclick="testConnection()">
-                        <i class="fas fa-plug me-2"></i>Test Connection
-                    </button>
                 </div>
             </div>
         </div>
         
         <!-- Sidebar -->
         <div class="col-md-4">
-            <!-- Connection Status -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-wifi me-2"></i>Connection Status
+                        <i class="fas fa-info-circle me-2"></i>API Configuration
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span>Tiger API</span>
-                        <span class="badge bg-secondary" id="api-status">Not Configured</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span>Trading Engine</span>
-                        <span class="badge bg-success">Online</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span>Webhook Endpoint</span>
-                        <span class="badge bg-success">Active</span>
-                    </div>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-lock me-2"></i>Tiger API credentials are managed via server configuration files, not through this page.
+                    </p>
                 </div>
             </div>
-            
-            <!-- Security Notice -->
-            <div class="card mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="fas fa-shield-alt me-2"></i>Security Notice
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            API keys are stored securely
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            All communications encrypted
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check text-success me-2"></i>
-                            Risk limits enforced
-                        </li>
-                        <li>
-                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                            Never share your API credentials
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            
+
             <!-- Webhook Info -->
             <div class="card">
                 <div class="card-header">
@@ -200,95 +119,16 @@
     </div>
 </form>
 
-<!-- Test Connection Modal -->
-<div class="modal fade" id="testModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-plug me-2"></i>Connection Test
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center" id="test-loading">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Testing...</span>
-                    </div>
-                    <p class="mt-2">Testing Tiger API connection...</p>
-                </div>
-                <div id="test-result" style="display: none;">
-                    <div class="alert" id="test-alert">
-                        <h6 id="test-title"></h6>
-                        <p id="test-message" class="mb-0"></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Test API connection
-function testConnection() {
-    const modal = new bootstrap.Modal(document.getElementById('testModal'));
-    modal.show();
-    
-    // Reset modal content
-    document.getElementById('test-loading').style.display = 'block';
-    document.getElementById('test-result').style.display = 'none';
-    
-    // Test connection (simulate for now)
-    setTimeout(() => {
-        document.getElementById('test-loading').style.display = 'none';
-        document.getElementById('test-result').style.display = 'block';
-        
-        // Check if credentials are provided
-        const apiKey = document.getElementById('tiger-api-key').value;
-        const secretKey = document.getElementById('tiger-secret-key').value;
-        const account = document.getElementById('tiger-account').value;
-        
-        if (!apiKey || !secretKey || !account) {
-            showTestResult(false, 'Missing Credentials', 'Please provide all required API credentials before testing.');
-        } else {
-            // In a real implementation, this would make an actual API call
-            showTestResult(true, 'Connection Successful', 'Successfully connected to Tiger Securities API.');
-            updateApiStatus('success');
-        }
-    }, 2000);
-}
-
-function showTestResult(success, title, message) {
-    const alertDiv = document.getElementById('test-alert');
-    const titleEl = document.getElementById('test-title');
-    const messageEl = document.getElementById('test-message');
-    
-    alertDiv.className = success ? 'alert alert-success' : 'alert alert-danger';
-    titleEl.innerHTML = (success ? '<i class="fas fa-check-circle me-2"></i>' : '<i class="fas fa-exclamation-circle me-2"></i>') + title;
-    messageEl.textContent = message;
-}
-
-function updateApiStatus(status) {
-    const statusBadge = document.getElementById('api-status');
-    if (status === 'success') {
-        statusBadge.textContent = 'Connected';
-        statusBadge.className = 'badge bg-success';
-    } else if (status === 'error') {
-        statusBadge.textContent = 'Error';
-        statusBadge.className = 'badge bg-danger';
-    }
-}
-
-// Copy webhook URL
 function copyWebhookUrl() {
     const input = document.getElementById('webhook-url-config');
     input.select();
     input.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(input.value);
     
-    // Show feedback
     const button = event.target.closest('button');
     const originalContent = button.innerHTML;
     button.innerHTML = '<i class="fas fa-check"></i>';
@@ -301,29 +141,5 @@ function copyWebhookUrl() {
         button.classList.add('btn-outline-secondary');
     }, 2000);
 }
-
-// Form validation
-document.getElementById('config-form').addEventListener('submit', function(e) {
-    const apiKey = document.getElementById('tiger-api-key').value;
-    const secretKey = document.getElementById('tiger-secret-key').value;
-    const account = document.getElementById('tiger-account').value;
-    
-    if (!apiKey || !secretKey || !account) {
-        e.preventDefault();
-        alert('Please provide all required Tiger Securities API credentials.');
-        return false;
-    }
-});
-
-// Check current API status on page load
-document.addEventListener('DOMContentLoaded', function() {
-    const apiKey = document.getElementById('tiger-api-key').value;
-    const secretKey = document.getElementById('tiger-secret-key').value;
-    const account = document.getElementById('tiger-account').value;
-    
-    if (apiKey && secretKey && account) {
-        updateApiStatus('success');
-    }
-});
 </script>
 {% endblock %}

@@ -12,6 +12,23 @@
     </div>
 </div>
 
+<!-- Account Type Filter -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('trades', account_type='all') }}" class="btn btn-{{ 'primary' if account_type == 'all' else 'outline-primary' }}">
+                <i class="fas fa-list me-1"></i>All Trades
+            </a>
+            <a href="{{ url_for('trades', account_type='real') }}" class="btn btn-{{ 'success' if account_type == 'real' else 'outline-success' }}">
+                <i class="fas fa-dollar-sign me-1"></i>Real Account
+            </a>
+            <a href="{{ url_for('trades', account_type='paper') }}" class="btn btn-{{ 'warning' if account_type == 'paper' else 'outline-warning' }}">
+                <i class="fas fa-file-alt me-1"></i>Paper Account
+            </a>
+        </div>
+    </div>
+</div>
+
 <!-- Trades Table -->
 <div class="row">
     <div class="col-12">
@@ -29,6 +46,7 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th>ID</th>
+                                    <th>Account</th>
                                     <th>Symbol</th>
                                     <th>Side</th>
                                     <th>Quantity</th>
@@ -38,14 +56,28 @@
                                     <th>Status</th>
                                     <th>Tiger Order ID</th>
                                     <th>Created</th>
-                                    <th>Updated</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for trade in trades %}
-                                <tr id="trade-row-{{ trade.id }}">
+                                <tr id="trade-row-{{ trade.id }}" 
+                                    class="clickable-row" 
+                                    style="cursor: pointer;" 
+                                    onclick="window.location.href='{{ url_for('trade_detail', trade_id=trade.id) }}'"
+                                    title="点击查看详情">
                                     <td><strong>#{{ trade.id }}</strong></td>
+                                    <td>
+                                        {% if trade.account_type == 'paper' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-file-alt me-1"></i>Paper
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-dollar-sign me-1"></i>Real
+                                            </span>
+                                        {% endif %}
+                                    </td>
                                     <td><strong>{{ trade.symbol }}</strong></td>
                                     <td>
                                         <span class="badge bg-{{ 'success' if trade.side.value == 'buy' else 'danger' }}">
@@ -108,11 +140,6 @@
                                     <td class="text-muted">
                                         <small>
                                             {{ trade.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
-                                        </small>
-                                    </td>
-                                    <td class="text-muted">
-                                        <small>
-                                            {{ trade.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}
                                         </small>
                                     </td>
                                     <td>
@@ -216,6 +243,15 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+.clickable-row:hover {
+    background-color: rgba(13, 110, 253, 0.1) !important;
+    transition: background-color 0.2s ease;
+}
+.clickable-row:hover td {
+    color: #0d6efd;
+}
+</style>
 <script>
 // Update trade status
 function updateTradeStatus(tradeId) {

@@ -1,0 +1,19 @@
+02-19 12:03:05	ERROR	order		oca_service	❌ Gradual OCA rebuild: failed for LITE: already_exists
+02-19 12:02:37	ERROR	order		tiger_client	Error getting order status: code=1200 msg=standard account response error(not_found:订单不存在)
+02-19 12:02:35	ERROR	order		order_tracker_service	Error registering order 42283622838960128: 'STOP_LOSS' is not a valid OrderRole
+02-19 12:02:29	ERROR	order		oca_service	Failed to create OCA protection: Failed to create any protection orders
+02-19 12:02:29	ERROR	trailing_stop		tiger_client	Fallback take profit failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:29	ERROR	trailing_stop		tiger_client	Fallback stop loss failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:28	ERROR	order		tiger_client	OCA creation failed: ApiException: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:27	ERROR	order		oca_service	Failed to create OCA protection: Failed to create any protection orders
+02-19 12:02:27	ERROR	trailing_stop		tiger_client	Fallback take profit failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:27	ERROR	trailing_stop		tiger_client	Fallback stop loss failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:27	ERROR	order		tiger_client	OCA creation failed: ApiException: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:25	ERROR	order		oca_service	Failed to create OCA protection: Failed to create any protection orders
+02-19 12:02:25	ERROR	trailing_stop		tiger_client	Fallback take profit failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:25	ERROR	trailing_stop		tiger_client	Fallback stop loss failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:25	ERROR	order		tiger_client	OCA creation failed: ApiException: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:24	ERROR	order		oca_service	Failed to create OCA protection: Failed to create any protection orders
+02-19 12:02:24	ERROR	trailing_stop		tiger_client	Fallback take profit failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:23	ERROR	trailing_stop		tiger_client	Fallback stop loss failed: code=1010 msg=biz param error(field 'quantity' must be greater than 0)
+02-19 12:02:23	ERROR	order		tiger_client	OCA creation failed: ApiException: code=1010 msg=biz param error(field 'quantity' must be greater than 0)

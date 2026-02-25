@@ -1,0 +1,204 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Order Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Order Tracker</h4>
+    <form method="post" action="{{ url_for('alpaca.alpaca_poll_orders') }}" class="d-inline">
+        <button type="submit" class="btn btn-sm btn-outline-warning">
+            <i class="fas fa-sync-alt me-1"></i>Poll Pending Orders
+        </button>
+    </form>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="NEW" {% if status_filter == 'NEW' %}selected{% endif %}>NEW</option>
+                    <option value="FILLED" {% if status_filter == 'FILLED' %}selected{% endif %}>FILLED</option>
+                    <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>CANCELLED</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>PENDING</option>
+                    <option value="ACCEPTED" {% if status_filter == 'ACCEPTED' %}selected{% endif %}>ACCEPTED</option>
+                    <option value="PARTIALLY_FILLED" {% if status_filter == 'PARTIALLY_FILLED' %}selected{% endif %}>PARTIAL</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <select name="role" class="form-select form-select-sm">
+                    <option value="">All Roles</option>
+                    <option value="entry" {% if role_filter == 'entry' %}selected{% endif %}>Entry</option>
+                    <option value="exit_signal" {% if role_filter == 'exit_signal' %}selected{% endif %}>Exit Signal</option>
+                    <option value="exit_trailing" {% if role_filter == 'exit_trailing' %}selected{% endif %}>Exit Trailing</option>
+                    <option value="stop_loss" {% if role_filter == 'stop_loss' %}selected{% endif %}>Stop Loss</option>
+                    <option value="take_profit" {% if role_filter == 'take_profit' %}selected{% endif %}>Take Profit</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <input type="text" name="symbol" class="form-control form-control-sm"
+                       placeholder="Symbol" value="{{ symbol_filter }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                <a href="{{ url_for('alpaca.alpaca_orders') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if orders.items %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Role</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Fill Price</th>
+                        <th>Fill Qty</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                        <th>P&L</th>
+                        <th>Signal</th>
+                        <th>Order ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders.items %}
+                    {% set pos = position_map.get(order.position_id) if order.position_id else None %}
+                    <tr>
+                        <td class="monospace text-muted small">
+                            {% if order.fill_time %}
+                                {{ order.fill_time.strftime('%m/%d %H:%M') }}
+                            {% else %}
+                                {{ order.created_at.strftime('%m/%d %H:%M') }}
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold">{{ order.symbol }}</td>
+                        <td>
+                            {% set role_colors = {
+                                'entry': 'bg-success',
+                                'exit_signal': 'bg-info',
+                                'exit_trailing': 'bg-primary',
+                                'stop_loss': 'bg-danger',
+                                'take_profit': 'bg-warning text-dark'
+                            } %}
+                            <span class="badge {{ role_colors.get(order.role.value, 'bg-secondary') }}">
+                                {{ order.role.value|upper|replace('_', ' ') }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if order.side %}
+                            <span class="badge {% if order.side == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ order.side|upper }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="monospace">{{ order.quantity or '-' }}</td>
+                        <td class="monospace">
+                            {% if order.avg_fill_price %}${{ "%.2f"|format(order.avg_fill_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">{{ order.filled_quantity or '-' }}</td>
+                        <td>
+                            {% set status_lower = order.status|lower %}
+                            <span class="badge badge-{{ status_lower }}">{{ order.status }}</span>
+                        </td>
+                        <td class="text-muted small">
+                            {% if order.fill_source %}
+                                {% if order.fill_source == 'websocket' %}
+                                    <i class="fas fa-bolt text-warning" title="WebSocket"></i> WS
+                                {% elif order.fill_source == 'polling' %}
+                                    <i class="fas fa-sync text-info" title="Polling"></i> Poll
+                                {% elif order.fill_source == 'reconciliation' %}
+                                    <i class="fas fa-balance-scale text-secondary" title="Reconciliation"></i> Recon
+                                {% else %}
+                                    {{ order.fill_source }}
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if pos and pos.realized_pnl is not none %}
+                                <span class="{% if pos.realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                    {% if pos.realized_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(pos.realized_pnl) }}
+                                </span>
+                                {% if pos.avg_entry_price and pos.avg_exit_price %}
+                                <br><small class="text-muted">
+                                    {{ "%.2f"|format(pos.avg_entry_price) }} → {{ "%.2f"|format(pos.avg_exit_price) }}
+                                </small>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.signal_content %}
+                            <button class="btn btn-xs btn-outline-secondary py-0 px-1"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#signal-{{ order.id }}"
+                                    title="View opening signal">
+                                <i class="fas fa-signal"></i>
+                            </button>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="monospace text-muted small">{{ (order.alpaca_order_id or '-')[:12] }}</td>
+                    </tr>
+                    {% if order.signal_content %}
+                    <tr class="collapse" id="signal-{{ order.id }}">
+                        <td colspan="12" class="bg-dark p-2">
+                            <pre class="mb-0 small text-light" style="max-height:200px;overflow-y:auto;white-space:pre-wrap;">{{ order.signal_content }}</pre>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if orders.pages > 1 %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if orders.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_orders', page=orders.prev_num, status=status_filter, symbol=symbol_filter, role=role_filter) }}">Prev</a>
+                    </li>
+                    {% endif %}
+                    {% for p in orders.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == orders.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('alpaca.alpaca_orders', page=p, status=status_filter, symbol=symbol_filter, role=role_filter) }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if orders.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_orders', page=orders.next_num, status=status_filter, symbol=symbol_filter, role=role_filter) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No tracked orders yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

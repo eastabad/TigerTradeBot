@@ -1,0 +1,549 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Trade Analytics - Alpaca Trading{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-chart-pie me-3"></i>Trade Analytics
+        </h1>
+        <p class="lead">Entry-based trade flow analysis with Position linkage (入场流水分析)</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('alpaca.alpaca_analytics') }}" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Symbol</label>
+                        <input type="text" name="symbol" class="form-control" placeholder="e.g. MSTR" value="{{ symbol_search or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="" {% if not status_filter %}selected{% endif %}>All / 全部</option>
+                            <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open / 持仓中</option>
+                            <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed / 已平仓</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Signal Grade</label>
+                        <select name="signal_grade" class="form-select">
+                            <option value="">All Grades</option>
+                            <option value="A" {% if signal_grade == 'A' %}selected{% endif %}>A Grade</option>
+                            <option value="B" {% if signal_grade == 'B' %}selected{% endif %}>B Grade</option>
+                            <option value="C" {% if signal_grade == 'C' %}selected{% endif %}>C Grade</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Exit Method</label>
+                        <select name="exit_method" class="form-select">
+                            <option value="">All Methods</option>
+                            {% for method in AlpacaExitMethod %}
+                            <option value="{{ method.value }}" {% if exit_method_filter == method.value %}selected{% endif %}>{{ method.value|replace('_', ' ')|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                        <a href="{{ url_for('alpaca.alpaca_analytics') }}" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </a>
+                    </div>
+                </form>
+                <form method="POST" action="{{ url_for('alpaca.alpaca_backfill_signal_data') }}" class="d-inline mt-2" onsubmit="return confirm('Backfill signal data for entries missing signals?')">
+                    <button type="submit" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-database me-1"></i>Backfill Signals
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('alpaca.alpaca_sync_entry_records') }}" class="d-inline mt-2" onsubmit="return confirm('Sync Entry Flow Records from Position/Leg data?')">
+                    <button type="submit" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-sync me-1"></i>Sync Entry Records
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="text-muted mb-1">Realized P&L</h6>
+                <h3 class="mb-0 {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(total_pnl) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="text-muted mb-1">Closed Positions</h6>
+                <h3 class="mb-0 text-info">{{ total_trades }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="text-muted mb-1">Win Rate</h6>
+                <h3 class="mb-0 {% if win_rate >= 50 %}text-success{% else %}text-warning{% endif %}">{{ "%.1f"|format(win_rate) }}%</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="text-muted mb-1">Avg Win</h6>
+                <h3 class="mb-0 text-success">${{ "%.2f"|format(avg_win) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="text-muted mb-1">Avg Loss</h6>
+                <h3 class="mb-0 text-danger">-${{ "%.2f"|format(avg_loss) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <h6 class="text-muted mb-1">Profit Factor</h6>
+                {% if profit_factor > 9999 %}
+                <h3 class="mb-0 text-success">&infin;</h3>
+                {% elif profit_factor >= 1.5 %}
+                <h3 class="mb-0 text-success">{{ "%.2f"|format(profit_factor) }}</h3>
+                {% elif profit_factor >= 1.0 %}
+                <h3 class="mb-0 text-warning">{{ "%.2f"|format(profit_factor) }}</h3>
+                {% else %}
+                <h3 class="mb-0 text-danger">{{ "%.2f"|format(profit_factor) }}</h3>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Performance by Signal Grade</h5>
+            </div>
+            <div class="card-body">
+                {% if grade_stats %}
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Grade</th>
+                            <th class="text-center">Positions</th>
+                            <th class="text-end">P&L</th>
+                            <th class="text-end">Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grade, stats in grade_stats.items() %}
+                        <tr>
+                            <td>
+                                <span class="badge {% if grade == 'A' %}bg-success{% elif grade == 'B' %}bg-warning text-dark{% elif grade == 'C' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ grade }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ stats.count }}</td>
+                            <td class="text-end {% if stats.pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats.pnl >= 0 %}+{% endif %}${{ "%.2f"|format(stats.pnl) }}
+                            </td>
+                            <td class="text-end">{{ "%.1f"|format(stats.win_rate) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted text-center">No closed position data yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-door-open me-2"></i>Performance by Exit Method</h5>
+            </div>
+            <div class="card-body">
+                {% if exit_stats %}
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Exit Method</th>
+                            <th class="text-center">Positions</th>
+                            <th class="text-end">P&L</th>
+                            <th class="text-end">Win Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for method, stats in exit_stats.items() %}
+                        <tr>
+                            <td>
+                                <span class="badge {% if method == 'take_profit' or method == 'oco_take_profit' %}bg-success{% elif method == 'trailing_stop' %}bg-info{% elif method == 'stop_loss' or method == 'oco_stop' %}bg-danger{% elif method == 'webhook_signal' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ method|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+                            <td class="text-center">{{ stats.count }}</td>
+                            <td class="text-end {% if stats.pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {% if stats.pnl >= 0 %}+{% endif %}${{ "%.2f"|format(stats.pnl) }}
+                            </td>
+                            <td class="text-end">{{ "%.1f"|format(stats.win_rate) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted text-center">No closed position data yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Entry Flow Records ({{ pagination.total if pagination else trades|length }})</h5>
+                {% if pagination and pagination.pages > 1 %}
+                <small class="text-muted">Page {{ pagination.page }} of {{ pagination.pages }}</small>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th>Qty</th>
+                                <th>Signal</th>
+                                <th>Grade</th>
+                                <th>Entry</th>
+                                <th>SL / TP</th>
+                                <th>Exit</th>
+                                <th>P&L</th>
+                                <th>Exit Method</th>
+                                <th>Hold</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trade in trades %}
+                            <tr class="{% if trade.is_open %}table-active{% endif %}">
+                                <td>
+                                    <strong>{{ trade.symbol }}</strong>
+                                    {% if trade.is_scaling %}
+                                    <span class="badge bg-warning text-dark ms-1" title="加仓">+</span>
+                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">{{ trade.position_key }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge {% if trade.side == 'long' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ trade.side|upper if trade.side else 'N/A' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ trade.quantity|int if trade.quantity else 'N/A' }}
+                                </td>
+                                <td>
+                                    <small title="{{ trade.signal_indicator or '' }}">{{ trade.display_signal_type or '-' }}</small>
+                                    {% if trade.signal_timeframe %}
+                                    <br><span class="badge bg-secondary">{{ trade.signal_timeframe }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trade.signal_grade %}
+                                    <span class="badge {% if trade.signal_grade == 'A' %}bg-success{% elif trade.signal_grade == 'B' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                        {{ trade.signal_grade }}{% if trade.signal_score %} ({{ trade.signal_score }}){% endif %}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    ${{ "%.2f"|format(trade.entry_price) if trade.entry_price else 'N/A' }}
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ trade.entry_time_et.strftime('%m/%d %H:%M') if trade.entry_time_et else 'N/A' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if trade.stop_price %}
+                                    <small class="text-danger">SL ${{ "%.2f"|format(trade.stop_price) }}</small>
+                                    {% endif %}
+                                    {% if trade.take_profit_price %}
+                                    <br><small class="text-success">TP ${{ "%.2f"|format(trade.take_profit_price) }}</small>
+                                    {% endif %}
+                                    {% if not trade.stop_price and not trade.take_profit_price %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trade.is_open %}
+                                    {% if trade.current_price %}
+                                    <span class="text-info">${{ "%.2f"|format(trade.current_price) }}</span>
+                                    <br><small class="text-muted">Current</small>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                    {% else %}
+                                    ${{ "%.2f"|format(trade.exit_price) if trade.exit_price else 'N/A' }}
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ trade.exit_time_et.strftime('%m/%d %H:%M') if trade.exit_time_et else '' }}
+                                    </small>
+                                    {% endif %}
+                                </td>
+                                <td class="{% if trade.is_open %}{% if trade.unrealized_pnl and trade.unrealized_pnl >= 0 %}text-success{% elif trade.unrealized_pnl %}text-danger{% endif %}{% else %}{% if (trade.pnl_amount or 0) >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
+                                    {% if trade.is_open %}
+                                        {% if trade.unrealized_pnl is not none %}
+                                        {% if trade.unrealized_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(trade.unrealized_pnl) }}
+                                        <br>
+                                        <small>{{ "%.2f"|format(trade.unrealized_pnl_pct or 0) }}%</small>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if trade.pnl_amount is not none %}
+                                            {% if trade.pnl_amount >= 0 %}+{% endif %}${{ "%.2f"|format(trade.pnl_amount) }}
+                                            {% if trade.pnl_percent %}
+                                            <br>
+                                            <small>{{ "%.2f"|format(trade.pnl_percent) }}%</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trade.is_open %}
+                                    <span class="badge bg-primary">持仓中</span>
+                                    {% elif trade.exit_method %}
+                                    <span class="badge {% if trade.exit_method.value == 'take_profit' or trade.exit_method.value == 'oco_take_profit' %}bg-success{% elif trade.exit_method.value == 'trailing_stop' %}bg-info{% elif trade.exit_method.value == 'stop_loss' or trade.exit_method.value == 'oco_stop' %}bg-danger{% elif trade.exit_method.value == 'webhook_signal' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                        {{ trade.exit_method.value|replace('_', ' ')|title }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">已平仓</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not trade.is_open and trade.hold_duration_seconds %}
+                                        {% set hours = (trade.hold_duration_seconds // 3600)|int %}
+                                        {% set minutes = ((trade.hold_duration_seconds % 3600) // 60)|int %}
+                                        {% if hours > 0 %}{{ hours }}h {% endif %}{{ minutes }}m
+                                    {% elif trade.is_open %}
+                                        <small class="text-muted">Holding...</small>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if trade.raw_json or trade.signal_indicator or trade.signal_grade or trade.stop_price or trade.take_profit_price %}
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleDetail(this, '{{ trade.id }}')">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% if trade.raw_json or trade.signal_indicator or trade.signal_grade or trade.stop_price or trade.take_profit_price %}
+                            <tr class="detail-row" id="detail-{{ trade.id }}" style="display:none;">
+                                <td colspan="12" class="p-0">
+                                    <div class="p-3" style="background: rgba(255,255,255,0.03);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted small"><i class="fas fa-info-circle me-1"></i>{{ trade.symbol }} Signal Details{% if trade.entry_order_id %} (Order: {{ trade.entry_order_id[:12] }}...){% endif %}</span>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleDetail(this.closest('tr').previousElementSibling.querySelector('button'), '{{ trade.id }}')">
+                                                <i class="fas fa-times me-1"></i>Close
+                                            </button>
+                                        </div>
+                                        {% if trade.raw_json %}
+                                        {% set json_data = trade.raw_json | parse_json %}
+                                        {% else %}
+                                        {% set json_data = None %}
+                                        {% endif %}
+                                        <div class="d-flex flex-wrap gap-3 mb-2 px-2 py-2" style="background: rgba(255,255,255,0.02); border-radius: 6px;">
+                                            <span><strong class="text-muted">Ticker:</strong> <span class="text-primary">{% if json_data is mapping %}{{ json_data.ticker or trade.symbol }}{% else %}{{ trade.symbol }}{% endif %}</span></span>
+                                            <span><strong class="text-muted">Action:</strong> {% if json_data is mapping %}{{ json_data.action or trade.side }}{% else %}{{ trade.side }}{% endif %}</span>
+                                            {% if json_data is mapping and json_data.extras and json_data.extras.timeframe %}
+                                            <span><strong class="text-muted">TF:</strong> {{ json_data.extras.timeframe }}</span>
+                                            {% elif trade.signal_timeframe %}
+                                            <span><strong class="text-muted">TF:</strong> {{ trade.signal_timeframe }}</span>
+                                            {% endif %}
+                                            {% if json_data is mapping and json_data.referencePrice %}
+                                            <span><strong class="text-muted">Price:</strong> ${{ "%.2f"|format(json_data.referencePrice) }}</span>
+                                            {% elif json_data is mapping and json_data.extras and json_data.extras.referencePrice %}
+                                            <span><strong class="text-muted">Price:</strong> ${{ "%.2f"|format(json_data.extras.referencePrice) }}</span>
+                                            {% elif trade.entry_price %}
+                                            <span><strong class="text-muted">Price:</strong> ${{ "%.2f"|format(trade.entry_price) }}</span>
+                                            {% endif %}
+                                            <span><strong class="text-muted">Indicator:</strong> {% if json_data is mapping and json_data.extras and json_data.extras.indicator %}{{ json_data.extras.indicator }}{% else %}{{ trade.signal_indicator or trade.display_signal_type or '-' }}{% endif %}</span>
+                                            {% if trade.signal_grade %}
+                                            <span><strong class="text-muted">Grade:</strong>
+                                                <span class="badge {% if trade.signal_grade == 'A' %}bg-success{% elif trade.signal_grade == 'B' %}bg-warning text-dark{% else %}bg-danger{% endif %}" style="font-size: 0.85rem;">{{ trade.signal_grade }}{% if trade.signal_score %} ({{ trade.signal_score }}){% endif %}</span>
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        {% if json_data is mapping and json_data.data %}
+                                        <div class="mb-2">
+                                            <strong class="text-muted d-block mb-1"><i class="fas fa-chart-line me-1"></i>Indicator Data:</strong>
+                                            <div style="font-size: 0.82rem;">
+                                                {% for key, value in json_data.data.items() %}
+                                                <div class="d-flex align-items-start py-1 px-2 {% if not loop.last %}border-bottom{% endif %}" style="border-color: rgba(255,255,255,0.05) !important;">
+                                                    <span class="text-muted me-2" style="min-width: 200px;">{{ key }}</span>
+                                                    <span style="color: #d4d4d4; word-break: break-word;">{{ value }}</span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% if json_data is mapping and json_data.extras %}
+                                        <div class="mb-2">
+                                            <strong class="text-muted d-block mb-1"><i class="fas fa-cog me-1"></i>Extras:</strong>
+                                            <div style="font-size: 0.82rem;">
+                                                {% for key, value in json_data.extras.items() %}
+                                                <div class="d-flex align-items-start py-1 px-2 {% if not loop.last %}border-bottom{% endif %}" style="border-color: rgba(255,255,255,0.05) !important;">
+                                                    <span class="text-muted me-2" style="min-width: 200px;">{{ key }}</span>
+                                                    {% if value is mapping %}
+                                                    <span style="color: #d4d4d4; word-break: break-word;">
+                                                        {% for sk, sv in value.items() %}{{ sk }}: {{ sv }}{% if not loop.last %}, {% endif %}{% endfor %}
+                                                    </span>
+                                                    {% else %}
+                                                    <span style="color: #d4d4d4; word-break: break-word;">{{ value }}</span>
+                                                    {% endif %}
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        {% if trade.stop_price or trade.take_profit_price %}
+                                        <div class="d-flex flex-wrap gap-3 mb-2 px-2 py-1" style="font-size: 0.82rem;">
+                                            {% if trade.stop_price %}
+                                            <span><strong class="text-danger">SL:</strong> <span style="color: #d4d4d4;">${{ "%.2f"|format(trade.stop_price) }}</span></span>
+                                            {% endif %}
+                                            {% if trade.take_profit_price %}
+                                            <span><strong class="text-success">TP:</strong> <span style="color: #d4d4d4;">${{ "%.2f"|format(trade.take_profit_price) }}</span></span>
+                                            {% endif %}
+                                            {% if trade.quantity %}
+                                            <span><strong class="text-muted">Qty:</strong> <span style="color: #d4d4d4;">{{ trade.quantity|int }}</span></span>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
+                                        {% if trade.raw_json %}
+                                        <details class="mt-2">
+                                            <summary class="text-muted small" style="cursor:pointer;"><i class="fas fa-code me-1"></i>Raw Webhook Payload</summary>
+                                            <div class="position-relative mt-1">
+                                                <button class="btn btn-sm btn-outline-secondary position-absolute" style="top:4px; right:4px; z-index:1; padding:2px 8px; font-size:0.7rem;" onclick="copyPayload(this)"><i class="fas fa-copy me-1"></i>Copy</button>
+                                                <pre class="bg-dark p-2 rounded mb-0" style="max-height:200px; overflow-y:auto; font-size:0.8rem; white-space: pre-wrap; word-break: break-word;"><code>{{ trade.raw_json | pretty_json }}</code></pre>
+                                            </div>
+                                        </details>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% else %}
+                            <tr>
+                                <td colspan="12" class="text-center text-muted py-4">
+                                    No entry records found
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if pagination and pagination.pages > 1 %}
+            <div class="card-footer">
+                <nav aria-label="Trade pagination">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('alpaca.alpaca_analytics', page=pagination.prev_num, symbol=symbol_search, status=status_filter, signal_grade=signal_grade, exit_method=exit_method_filter, start_date=start_date, end_date=end_date) }}">
+                                <i class="fas fa-chevron-left"></i> Prev
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == pagination.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('alpaca.alpaca_analytics', page=page_num, symbol=symbol_search, status=status_filter, signal_grade=signal_grade, exit_method=exit_method_filter, start_date=start_date, end_date=end_date) }}">{{ page_num }}</a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('alpaca.alpaca_analytics', page=pagination.next_num, symbol=symbol_search, status=status_filter, signal_grade=signal_grade, exit_method=exit_method_filter, start_date=start_date, end_date=end_date) }}">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+<script>
+function toggleDetail(btn, id) {
+    var row = document.getElementById('detail-' + id);
+    var icon = btn.querySelector('i');
+    if (row.style.display === 'none') {
+        row.style.display = '';
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        row.style.display = 'none';
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+}
+function copyPayload(btn) {
+    var code = btn.closest('.position-relative').querySelector('code');
+    navigator.clipboard.writeText(code.textContent).then(function() {
+        var origHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied';
+        setTimeout(function() { btn.innerHTML = origHtml; }, 1500);
+    });
+}
+</script>
+{% endblock %}

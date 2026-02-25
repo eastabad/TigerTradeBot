@@ -1,0 +1,132 @@
+2026-01-21 10:21:33.93
+df95abdd
+User
+DEBUG:tiger_openapi:[dea01ee2-f6dc-11f0-b933-4200a9fe0102]response:{"code":0,"message":"success","timestamp":1769008893846,"data":{"items":[{"symbol":"AMD","market":"US","contractId":318,"secType":"STK","name":"美国超微公司","account":"21655301822151141","position":60,"positionScale":0,"positionQty":60.0,"salableQty":0.0,"averageCost":246.7623,"averageCostByAverage":246.7623,"unrealizedPnl":-22.94,"unrealizedPnlByAverage":-22.94,"unrealizedPnlPercent":-0.0015,"unrealizedPnlPercentByAverage":-0.0015,"unrealizedPnlByCostOfCarry":-22.94,"unrealizedPnlPercentByCostOfCarry":-0.0015,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":246.7623,"marketValue":14782.8,"currency":"USD","multiplier":1.0,"status":0,"identifier":"AMD","latestPrice":246.38,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.0059,"mmValue":5913.12,"todayPnl":-5.02,"todayPnlPercent":-1.0E-4,"categories":[],"lastClosePrice":231.92},{"symbol":"COST","market":"US","contractId":1532,"secType":"STK","name":"好市多","account":"21655301822151141","position":30,"positionScale":0,"positionQty":30.0,"salableQty":0.0,"averageCost":971.3582,"averageCostByAverage":971.3582,"unrealizedPnl":-15.55,"unrealizedPnlByAverage":-15.55,"unrealizedPnlPercent":-5.0E-4,"unrealizedPnlPercentByAverage":-5.0E-4,"unrealizedPnlByCostOfCarry":-15.54,"unrealizedPnlPercentByCostOfCarry":-5.0E-4,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":971.3582,"marketValue":29125.2,"currency":"USD","multiplier":1.0,"status":0,"identifier":"COST","latestPrice":970.84,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.0116,"mmValue":11650.08,"todayPnl":-65.47,"todayPnlPercent":-0.0016,"categories":[],"lastClosePrice":964.26},{"symbol":"CRCL","market":"US","contractId":356593409,"secType":"STK","name":"Circle Internet Corp.","account":"21655301822151141","position":68,"positionScale":0,"positionQty":68.0,"salableQty":0.0,"averageCost":74.2438,"averageCostByAverage":74.2438,"unrealizedPnl":-12.4,"unrealizedPnlByAverage":-12.4,"unrealizedPnlPercent":-0.0025,"unrealizedPnlPercentByAverage":-0.0025,"unrealizedPnlByCostOfCarry":-12.4,"unrealizedPnlPercentByCostOfCarry":-0.0025,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":74.2438,"marketValue":5036.1752,"currency":"USD","multiplier":1.0,"status":0,"identifier":"CRCL","latestPrice":74.0614,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.005,"mmValue":5036.1752,"todayPnl":-12.4,"todayPnlPercent":-0.0025,"categories":[],"lastClosePrice":72.7},{"symbol":"GOOG","market":"US","contractId":3337,"secType":"STK","name":"谷歌","account":"21655301822151141","position":30,"positionScale":0,"positionQty":30.0,"salableQty":0.0,"averageCost":327.0587,"averageCostByAverage":327.0587,"unrealizedPnl":-38.96,"unrealizedPnlByAverage":-38.96,"unrealizedPnlPercent":-0.004,"unrealizedPnlPercentByAverage":-0.004,"unrealizedPnlByCostOfCarry":-38.96,"unrealizedPnlPercentByCostOfCarry":-0.004,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":327.0587,"marketValue":9772.8,"currency":"USD","multiplier":1.0,"status":0,"identifier":"GOOG","latestPrice":325.76,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.0034,"mmValue":3420.48,"todayPnl":-102.24,"todayPnlPercent":-0.0047,"categories":[],"lastClosePrice":322.16},{"symbol":"IREN","market":"US","contractId":157198,"secType":"STK","name":"IREN Ltd","account":"21655301822151141","position":199,"positionScale":0,"positionQty":199.0,"salableQty":0.0,"averageCost":56.7403,"averageCostByAverage":56.7403,"unrealizedPnl":-11.99,"unrealizedPnlByAverage":-11.99,"unrealizedPnlPercent":-0.0011,"unrealizedPnlPercentByAverage":-0.0011,"unrealizedPnlByCostOfCarry":-11.99,"unrealizedPnlPercentByCostOfCarry":-0.0011,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":56.7403,"marketValue":11279.32,"currency":"USD","multiplier":1.0,"status":0,"identifier":"IREN","latestPrice":56.68,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.0112,"mmValue":11279.32,"todayPnl":-649.32,"todayPnlPercent":-0.02,"categories":[],"lastClosePrice":54.26},{"symbol":"MPWR","market":"US","contractId":5088,"secType":"STK","name":"Monolithic Power Systems","account":"21655301822151141","position":4,"positionScale":0,"positionQty":4.0,"salableQty":0.0,"averageCost":1060.23,"averageCostByAverage":1060.23,"unrealizedPnl":28.87,"unrealizedPnlByAverage":28.87,"unrealizedPnlPercent":0.0068,"unrealizedPnlPercentByAverage":0.0068,"unrealizedPnlByCostOfCarry":28.87,"unrealizedPnlPercentByCostOfCarry":0.0068,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":1060.23,"marketValue":4269.7896,"currency":"USD","multiplier":1.0,"status":0,"identifier":"MPWR","latestPrice":1067.4474,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.0017,"mmValue":1707.9158,"todayPnl":28.87,"todayPnlPercent":0.0068,"categories":[],"lastClosePrice":1034.49},{"symbol":"ORCL","market":"US","contractId":5714,"secType":"STK","name":"甲骨文","account":"21655301822151141","position":-81,"positionScale":0,"positionQty":-81.0,"salableQty":-81.0,"averageCost":177.3638,"averageCostByAverage":177.3638,"unrealizedPnl":139.22,"unrealizedPnlByAverage":139.22,"unrealizedPnlPercent":0.0097,"unrealizedPnlPercentByAverage":0.0097,"unrealizedPnlByCostOfCarry":139.22,"unrealizedPnlPercentByCostOfCarry":0.0097,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":177.3638,"marketValue":-14227.245,"currency":"USD","multiplier":1.0,"status":0,"identifier":"ORCL","latestPrice":175.645,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.0056,"mmValue":5690.898,"todayPnl":1.11,"todayPnlPercent":0.0,"categories":[],"lastClosePrice":179.92},{"symbol":"SOXL","market":"US","contractId":7046,"secType":"STK","name":"三倍做多半导体ETF-Direxion Daily","account":"21655301822151141","position":160,"positionScale":0,"positionQty":160.0,"salableQty":0.0,"averageCost":62.5184,"averageCostByAverage":62.5184,"unrealizedPnl":-46.15,"unrealizedPnlByAverage":-46.15,"unrealizedPnlPercent":-0.0046,"unrealizedPnlPercentByAverage":-0.0046,"unrealizedPnlByCostOfCarry":-46.15,"unrealizedPnlPercentByCostOfCarry":-0.0046,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":62.5184,"marketValue":9956.8,"currency":"USD","multiplier":1.0,"status":0,"identifier":"SOXL","latestPrice":62.23,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.004,"mmValue":3982.72,"todayPnl":-252.07,"todayPnlPercent":-0.007,"categories":["ETF"],"lastClosePrice":57.94},{"symbol":"TSLL","market":"US","contractId":359261,"secType":"STK","name":"2倍做多TSLA ETF-Direxion","account":"21655301822151141","position":296,"positionScale":0,"positionQty":296.0,"salableQty":0.0,"averageCost":16.8918,"averageCostByAverage":16.8918,"unrealizedPnl":-0.13,"unrealizedPnlByAverage":-0.13,"unrealizedPnlPercent":0.0,"unrealizedPnlPercentByAverage":0.0,"unrealizedPnlByCostOfCarry":-0.13,"unrealizedPnlPercentByCostOfCarry":0.0,"realizedPnl":0.0,"realizedPnlByAverage":0.0,"averageCostOfCarry":16.8918,"marketValue":4999.8544,"currency":"USD","multiplier":1.0,"status":0,"identifier":"TSLL","latestPrice":16.8914,"updateTimestamp":1769008893842,"comboTypes":[],"comboTypeMap":{},"mmPercent":0.005,"mmValue":4999.8544,"todayPnl":-0.13,"todayPnlPercent":0.0,"categories":["ETF"],"lastClosePrice":16.41}]},"sign":"qbFii+mtLkt3F2d7L0BFjiagk/EaqAoDzR/k2iWGR+vrlDDyL7pknYqA3G0rdVOIcalQDUuY31wgWTfzPA/XgrekMmB4wGCycfwK52odwpvMiGnseuTetDq26ojXU2jN9Y++YtC+Qpa+EY+dRnnBCmAMi2B3mue1+WzFBl2uI6E="}
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: GOOG, Qty: 30, Cost: 327.0587
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: MPWR, Qty: 4, Cost: 1060.23
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: COST, Qty: 30, Cost: 971.3582
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: IREN, Qty: 199, Cost: 56.7403
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: AMD, Qty: 60, Cost: 246.7623
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: CRCL, Qty: 68, Cost: 74.2438
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: ORCL, Qty: -81, Cost: 177.3638
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: TSLL, Qty: 296, Cost: 16.8918
+2026-01-21 10:21:33.94
+df95abdd
+User
+INFO:tiger_client:Position: SOXL, Qty: 160, Cost: 62.5184
+2026-01-21 10:21:34.07
+df95abdd
+User
+DEBUG:tiger_openapi:[dedcb2c6-f6dc-11f0-b933-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg-quote/gateway?biz_content={"include_hour_trading":false,"lang":"zh_CN","symbols":["COST"]}&charset=UTF-8&device_id=00:00:00:00:00:00&method=quote_real_time&sign_type=RSA&tiger_id=20156340×tamp=2026-01-21 15:21:34&version=2.0&sign=DQ8uvBi3JoLlx4ZQzYwIqnz8w1P12F3DlKy1w+B4DjusUOT6ga6XryOQXqR3p0dlxOUw2Bdi3I7xPLM+azZM6ISZa8/IYIlEmVoSB+WugjtMER3MOet3iqX+geImFuY7CN2fousuWVjRPwseI6kKwcrAFYI1PYP6aOsYv/tYFRk=
+2026-01-21 10:21:34.30
+df95abdd
+User
+DEBUG:tiger_openapi:[dedcb2c6-f6dc-11f0-b933-4200a9fe0102]response:{"code":4,"message":"4000:permission denied(current device does not have permission)","timestamp":1769008894213}
+2026-01-21 10:21:34.30
+df95abdd
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg-quote/gateway HTTP/1.1" 200 0
+2026-01-21 10:21:34.30
+df95abdd
+User
+ERROR:tiger_client:Error getting latest trade for COST: code=4 msg=4000:permission denied(current device does not have permission)
+2026-01-21 10:21:34.33
+df95abdd
+User
+INFO:trailing_stop_engine:📊 Syncing avg cost for [PAPER]TSLL: 16.88 -> 16.89
+2026-01-21 10:21:34.33
+df95abdd
+User
+DEBUG:tiger_openapi:[df0514aa-f6dc-11f0-b933-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg-quote/gateway?biz_content={"include_hour_trading":false,"lang":"zh_CN","symbols":["TSLL"]}&charset=UTF-8&device_id=00:00:00:00:00:00&method=quote_real_time&sign_type=RSA&tiger_id=20156340×tamp=2026-01-21 15:21:34&version=2.0&sign=AvvleiZ0/SuFDP73Vs9DrOobxbWSXikBQZUsH6IF049k0/vjBFyolI6BGVg1WO4GQCnWH7s8w/sc1yCAuYYYHQN36+H2ujqQWaqiV2JTMYZwrC/zvo2//E5dFJ5pmdOVycb5iiJmWD4sBSBmyV1fxBBxMXlB61gveVRMwcl0BTQ=
+2026-01-21 10:21:34.62
+df95abdd
+User
+ERROR:tiger_client:Error getting latest trade for TSLL: code=4 msg=4000:permission denied(current device does not have permission)
+2026-01-21 10:21:34.62
+df95abdd
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg-quote/gateway HTTP/1.1" 200 0
+2026-01-21 10:21:34.62
+df95abdd
+User
+DEBUG:tiger_openapi:[df0514aa-f6dc-11f0-b933-4200a9fe0102]response:{"code":4,"message":"4000:permission denied(current device does not have permission)","timestamp":1769008894474}
+2026-01-21 10:21:34.92
+df95abdd
+User
+INFO:trailing_stop_engine:📊 Syncing quantity for [PAPER]AMD: 20.0 -> 60
+2026-01-21 10:21:34.92
+df95abdd
+User
+INFO:trailing_stop_engine:📊 Syncing avg cost for [PAPER]AMD: 247.29 -> 246.76
+2026-01-21 10:21:34.92
+df95abdd
+User
+DEBUG:tiger_openapi:[df5ef7cc-f6dc-11f0-b933-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg-quote/gateway?biz_content={"include_hour_trading":false,"lang":"zh_CN","symbols":["AMD"]}&charset=UTF-8&device_id=00:00:00:00:00:00&method=quote_real_time&sign_type=RSA&tiger_id=20156340×tamp=2026-01-21 15:21:34&version=2.0&sign=mEsM2Fr5+hMO9uxXAU9fYNqopnK1htvJrpdTUwsK5h/Kc+aHo2w5S/7/w6pnfPgluUt6Pd7CljJIuLDLrWOq69DNcbiQIvSUVyhjQaVoFWMMM5+TZi5BIqkyqjGMPyRnTPjabH0pAmtQTuoaUTlRr4tSPhe8C/ODuZOn2NjJQkQ=
+2026-01-21 10:21:35.35
+df95abdd
+User
+DEBUG:tiger_openapi:[df5ef7cc-f6dc-11f0-b933-4200a9fe0102]response:{"code":4,"message":"4000:permission denied(current device does not have permission)","timestamp":1769008895262}
+2026-01-21 10:21:35.35
+df95abdd
+User
+ERROR:tiger_client:Error getting latest trade for AMD: code=4 msg=4000:permission denied(current device does not have permission)
+2026-01-21 10:21:35.35
+df95abdd
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg-quote/gateway HTTP/1.1" 200 0
+2026-01-21 10:21:35.82
+df95abdd
+User
+INFO:trailing_stop_engine:📊 Syncing avg cost for [PAPER]GOOG: 327.05 -> 327.06
+2026-01-21 10:21:35.82
+df95abdd
+User
+INFO:trailing_stop_engine:📊 Syncing quantity for [PAPER]GOOG: 15.0 -> 30
+2026-01-21 10:21:37.32
+df95abdd
+User
+DEBUG:tiger_openapi:[e0cd1f1c-f6dc-11f0-b933-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg-quote/gateway?biz_content={"include_hour_trading":false,"lang":"zh_CN","symbols":["MPWR"]}&charset=UTF-8&device_id=00:00:00:00:00:00&method=quote_real_time&sign_type=RSA&tiger_id=20156340×tamp=2026-01-21 15:21:37&version=2.0&sign=IYkWmVev0cplN8Xda6oBlUvdQz0RNi+56g8nwzXPI929dSCkbg07b2bcujI6MekdKD/shyLoEkYolAt09c0qnPMCnIT0o2bFX+IYQa9Tp93+tR+Eg10Jlgh+w5x4gPWQHCl9KPtAYf+ulKkEDFnIBBT71b6VoKJ5/Lswir+762s=
+2026-01-21 10:21:37.75
+df95abdd
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg-quote/gateway HTTP/1.1" 200 0
+2026-01-21 10:21:37.75
+df95abdd
+User
+DEBUG:tiger_openapi:[e0cd1f1c-f6dc-11f0-b933-4200a9fe0102]response:{"code":4,"message":"4000:permission denied(current device does not have permission)","timestamp":1769008897662}
+2026-01-21 10:21:37.75
+df95abdd
+User
+ERROR:tiger_client:Error getting latest trade for MPWR: code=4 msg=4000:permission denied(current device does not have permission)
+2026-01-21 10:21:38.22
+df95abdd
+User
+DEBUG:tiger_openapi:[e128b638-f6dc-11f0-b933-4200a9fe0102]request:https://openapi.tigerfintech.com/hkg-quote/gateway?biz_content={"include_hour_trading":false,"lang":"zh_CN","symbols":["ORCL"]}&charset=UTF-8&device_id=00:00:00:00:00:00&method=quote_real_time&sign_type=RSA&tiger_id=20156340×tamp=2026-01-21 15:21:37&version=2.0&sign=s6vDpu/nnFCW+njqSGoDkudYwCc29nocIa31kK4lSNXuVmLNY5vMnf/+gIcVk1CgDh+UEKfC3H4pzC9XhEZbcA4O5tFNulABJTdqge3/NCq8c+wqKJYCH9kOAes4GyADHP48+bDLuNnppiNt/S1lJuJ46NPnbWgVPywNFmxJrT0=
+2026-01-21 10:21:38.52
+df95abdd
+User
+ERROR:tiger_client:Error getting latest trade for ORCL: code=4 msg=4000:permission denied(current device does not have permission)

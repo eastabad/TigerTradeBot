@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Report - {{ report.report_date }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-brain me-3"></i>Report: {{ report.report_date }}
+                </h1>
+                <p class="lead">Generated at {{ report.created_at.strftime('%Y-%m-%d %H:%M') if report.created_at else 'N/A' }}</p>
+            </div>
+            <a href="{{ url_for('trade_analysis_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+
+{% set summary = report.summary_data or {} %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.health_score >= 90 %}
+                <h2 class="text-success">{{ report.health_score }}/100</h2>
+                {% elif report.health_score >= 70 %}
+                <h2 class="text-warning">{{ report.health_score }}/100</h2>
+                {% else %}
+                <h2 class="text-danger">{{ report.health_score }}/100</h2>
+                {% endif %}
+                <p class="text-muted mb-0">Health Score</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2>{{ report.total_trades }}</h2>
+                <p class="text-muted mb-0">Total Trades</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                {% if report.total_pnl and report.total_pnl >= 0 %}
+                <h2 class="text-success">${{ "%.2f"|format(report.total_pnl) }}</h2>
+                {% elif report.total_pnl %}
+                <h2 class="text-danger">${{ "%.2f"|format(report.total_pnl) }}</h2>
+                {% else %}
+                <h2>-</h2>
+                {% endif %}
+                <p class="text-muted mb-0">Total P&L</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2>{{ summary.get('total_anomalies', 0) }}</h2>
+                <p class="text-muted mb-0">Anomalies</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% set report_data = report.report_data or {} %}
+{% set brokers = report_data.get('brokers', {}) %}
+
+{% for broker_name, broker_data in brokers.items() %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>{{ broker_name|upper }} Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                {% set perf = broker_data.get('performance', {}) %}
+                {% set stats = broker_data.get('stats', {}) %}
+                <div class="row">
+                    <div class="col-md-2">
+                        <strong>Win/Loss:</strong> {{ perf.get('winners', 0) }}/{{ perf.get('losers', 0) }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Win Rate:</strong> {{ perf.get('win_rate', 0) }}%
+                    </div>
+                    <div class="col-md-2">
+                        <strong>P&L:</strong>
+                        {% if perf.get('total_pnl', 0) >= 0 %}
+                        <span class="text-success">${{ "%.2f"|format(perf.get('total_pnl', 0)) }}</span>
+                        {% else %}
+                        <span class="text-danger">${{ "%.2f"|format(perf.get('total_pnl', 0)) }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Signals:</strong> {{ stats.get('total_signals', 0) }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Trackers:</strong> {{ stats.get('total_trackers', 0) }}
+                    </div>
+                    <div class="col-md-2">
+                        <strong>API Fills:</strong> {{ stats.get('total_api_fills', 0) }}
+                    </div>
+                </div>
+
+                {% set matched = broker_data.get('matched_groups', []) %}
+                {% if matched %}
+                <hr>
+                <h6>Matched Trade Groups ({{ matched|length }})</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Type</th>
+                                <th>Exit Method</th>
+                                <th>P&L</th>
+                                <th>Entry Trackers</th>
+                                <th>Exit Trackers</th>
+                                <th>API Fills</th>
+                                <th>Anomalies</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for group in matched %}
+                            <tr>
+                                <td><strong>{{ group.get('symbol', 'N/A') }}</strong></td>
+                                <td><span class="badge bg-secondary">{{ group.get('match_type', '') }}</span></td>
+                                <td>{{ group.get('exit_method', '-') }}</td>
+                                <td>
+                                    {% if group.get('total_pnl') is not none %}
+                                        {% if group.get('total_pnl', 0) >= 0 %}
+                                        <span class="text-success">${{ "%.2f"|format(group.get('total_pnl', 0)) }}</span>
+                                        {% else %}
+                                        <span class="text-danger">${{ "%.2f"|format(group.get('total_pnl', 0)) }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>{{ group.get('entry_trackers', [])|length }}</td>
+                                <td>{{ group.get('exit_trackers', [])|length }}</td>
+                                <td>{{ group.get('api_fills', [])|length }}</td>
+                                <td>
+                                    {% set anom_count = group.get('anomalies', [])|length %}
+                                    {% if anom_count > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ anom_count }}</span>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% set unmatched_s = broker_data.get('unmatched_signals', []) %}
+                {% set unmatched_t = broker_data.get('unmatched_trackers', []) %}
+                {% set unmatched_a = broker_data.get('unmatched_api_fills', []) %}
+                {% if unmatched_s or unmatched_t or unmatched_a %}
+                <hr>
+                <h6 class="text-warning">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Unmatched Records: {{ unmatched_s|length }} signals, {{ unmatched_t|length }} trackers, {{ unmatched_a|length }} API fills
+                </h6>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% set ai = report.ai_analysis_data or {} %}
+{% if ai %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-robot me-2"></i>AI Analysis Results</h5>
+            </div>
+            <div class="card-body">
+                {% set unmatched_ai = ai.get('unmatched_analysis', {}) %}
+                {% if unmatched_ai.get('summary') %}
+                <h6>Unmatched Records Analysis</h6>
+                <p>{{ unmatched_ai.get('summary', '') }}</p>
+
+                {% set ai_matches = unmatched_ai.get('ai_matches', []) %}
+                {% if ai_matches %}
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Confidence</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for match in ai_matches %}
+                            <tr>
+                                <td>
+                                    {% set conf = match.get('confidence', 0) %}
+                                    {% if conf >= 0.8 %}
+                                    <span class="badge bg-success">{{ "%.0f"|format(conf * 100) }}%</span>
+                                    {% elif conf >= 0.5 %}
+                                    <span class="badge bg-warning text-dark">{{ "%.0f"|format(conf * 100) }}%</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ "%.0f"|format(conf * 100) }}%</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ match.get('reason', '') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% set data_issues = unmatched_ai.get('data_issues', []) %}
+                {% if data_issues %}
+                <h6 class="text-warning">Data Issues</h6>
+                <ul>
+                    {% for issue in data_issues %}
+                    <li>
+                        <span class="badge bg-{{ 'danger' if issue.get('severity') == 'error' else 'warning' if issue.get('severity') == 'warning' else 'info' }}">
+                            {{ issue.get('severity', 'info') }}
+                        </span>
+                        {{ issue.get('description', '') }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                <hr>
+                {% endif %}
+
+                {% set anomaly_ai = ai.get('anomaly_analysis', {}) %}
+                {% if anomaly_ai.get('summary') %}
+                <h6>Anomaly Analysis</h6>
+                <p>{{ anomaly_ai.get('summary', '') }}</p>
+
+                {% set critical = anomaly_ai.get('critical_issues', []) %}
+                {% if critical %}
+                <div class="alert alert-danger">
+                    <strong>Critical Issues:</strong>
+                    <ul class="mb-0">
+                        {% for c in critical %}
+                        <li>{{ c.get('description', c) if c is mapping else c }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                <hr>
+                {% endif %}
+
+                {% set sq = ai.get('signal_quality', {}) %}
+                {% if sq.get('summary') %}
+                <h6>Signal Quality</h6>
+                <p>{{ sq.get('summary', '') }}</p>
+
+                {% set signal_stats = sq.get('signal_stats', {}) %}
+                {% if signal_stats %}
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Win Rate:</strong> {{ "%.1f"|format(signal_stats.get('win_rate', 0)) }}%
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Winners/Losers:</strong> {{ signal_stats.get('winners', 0) }}/{{ signal_stats.get('losers', 0) }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Avg Win:</strong> ${{ "%.2f"|format(signal_stats.get('avg_win', 0)) }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Avg Loss:</strong> ${{ "%.2f"|format(signal_stats.get('avg_loss', 0)) }}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% set recs = sq.get('recommendations', []) %}
+                {% if recs %}
+                <h6>Recommendations</h6>
+                <div class="list-group">
+                    {% for rec in recs %}
+                    <div class="list-group-item">
+                        <span class="badge bg-{{ 'danger' if rec.get('priority') == 'high' else 'warning' if rec.get('priority') == 'medium' else 'info' }} me-2">
+                            {{ rec.get('priority', 'low')|upper }}
+                        </span>
+                        {{ rec.get('recommendation', '') }}
+                        {% if rec.get('expected_impact') %}
+                        <br><small class="text-muted">Expected impact: {{ rec.get('expected_impact', '') }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

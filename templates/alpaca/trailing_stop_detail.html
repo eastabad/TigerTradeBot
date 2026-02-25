@@ -1,0 +1,241 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Trailing Stop - {{ ts.symbol }} - Alpaca{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <a href="{{ url_for('alpaca.alpaca_trailing_stops') }}" class="text-muted text-decoration-none">
+            <i class="fas fa-arrow-left me-2"></i>
+        </a>
+        <i class="fas fa-shield-alt me-2"></i>{{ ts.symbol }}
+        {% if ts.is_active %}
+        <span class="badge bg-success ms-2">Active</span>
+        {% else %}
+        <span class="badge bg-secondary ms-2">Inactive</span>
+        {% endif %}
+    </h4>
+    {% if ts.is_active %}
+    <form method="post" action="{{ url_for('alpaca.alpaca_deactivate_trailing_stop', ts_id=ts.id) }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deactivate trailing stop for {{ ts.symbol }}?')">
+            <i class="fas fa-stop me-1"></i>Deactivate
+        </button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Position Info</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="small text-muted">Side</div>
+                        <div>
+                            {% if ts.side == 'long' %}
+                            <span class="badge bg-success">LONG</span>
+                            {% else %}
+                            <span class="badge bg-danger">SHORT</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Quantity</div>
+                        <div class="monospace fw-bold">{{ "%.0f"|format(ts.quantity) if ts.quantity == ts.quantity|int else ts.quantity }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Entry Price</div>
+                        <div class="monospace">${{ "%.2f"|format(ts.entry_price) }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Current Price</div>
+                        <div class="monospace">
+                            {% if ts.current_price %}${{ "%.2f"|format(ts.current_price) }}{% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Highest Price</div>
+                        <div class="monospace">
+                            {% if ts.highest_price %}${{ "%.2f"|format(ts.highest_price) }}{% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">P&L %</div>
+                        <div class="monospace">
+                            {% if ts.current_price and ts.entry_price %}
+                                {% set pnl_pct = ((ts.current_price - ts.entry_price) / ts.entry_price * 100) if ts.side == 'long' else ((ts.entry_price - ts.current_price) / ts.entry_price * 100) %}
+                                <span class="fw-bold {{ 'text-profit' if pnl_pct >= 0 else 'text-loss' }}">
+                                    {{ "%.2f"|format(pnl_pct) }}%
+                                </span>
+                            {% else %}-{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-crosshairs me-2"></i>Stop Levels</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="small text-muted">Trailing Stop</div>
+                        <div class="monospace fw-bold text-warning">
+                            {% if ts.trailing_stop_price %}${{ "%.2f"|format(ts.trailing_stop_price) }}{% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Fixed Stop Loss</div>
+                        <div class="monospace text-loss">
+                            {% if ts.stop_loss_price %}${{ "%.2f"|format(ts.stop_loss_price) }}{% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Take Profit</div>
+                        <div class="monospace text-profit">
+                            {% if ts.take_profit_price %}${{ "%.2f"|format(ts.take_profit_price) }}{% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Phase</div>
+                        <div>
+                            {% if ts.phase == 'dynamic' %}
+                            <span class="badge bg-info">Dynamic</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Progressive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">ATR Value</div>
+                        <div class="monospace">
+                            {% if ts.atr_value %}{{ "%.4f"|format(ts.atr_value) }}{% else %}-{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="small text-muted">Trend Score</div>
+                        <div class="monospace">
+                            {% if ts.trend_score is not none %}{{ "%.0f"|format(ts.trend_score) }}/100{% else %}-{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if oco %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-link me-2 text-info"></i>Active OCO Protection</h6>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <div class="small text-muted">OCO Order ID</div>
+                <div class="monospace small">{{ oco.oco_order_id[:12] }}...</div>
+            </div>
+            <div class="col-md-2">
+                <div class="small text-muted">Stop Price</div>
+                <div class="monospace text-loss">${{ "%.2f"|format(oco.stop_price) if oco.stop_price else '-' }}</div>
+            </div>
+            <div class="col-md-2">
+                <div class="small text-muted">Take Profit</div>
+                <div class="monospace text-profit">${{ "%.2f"|format(oco.take_profit_price) if oco.take_profit_price else '-' }}</div>
+            </div>
+            <div class="col-md-2">
+                <div class="small text-muted">TIF</div>
+                <div><span class="badge bg-secondary">{{ oco.time_in_force|upper }}</span></div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Modifications</div>
+                <div>{{ oco.modify_count }}x</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if logs %}
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Event Log ({{ logs|length }})</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Event</th>
+                        <th>Price</th>
+                        <th>Highest</th>
+                        <th>Stop</th>
+                        <th>ATR</th>
+                        <th>Profit%</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="small text-muted">{{ log.created_at.strftime('%m/%d %H:%M:%S') if log.created_at else '-' }}</td>
+                        <td>
+                            {% if log.event_type == 'triggered' %}
+                            <span class="badge bg-danger">Triggered</span>
+                            {% elif log.event_type == 'stop_raised' %}
+                            <span class="badge bg-success">Stop Raised</span>
+                            {% elif log.event_type == 'dynamic_switch' %}
+                            <span class="badge bg-info">Dynamic Switch</span>
+                            {% elif log.event_type == 'created' %}
+                            <span class="badge bg-primary">Created</span>
+                            {% elif log.event_type == 'deactivated' %}
+                            <span class="badge bg-secondary">Deactivated</span>
+                            {% elif log.event_type == 'oco_updated' %}
+                            <span class="badge bg-warning text-dark">OCO Updated</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.event_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.current_price %}${{ "%.2f"|format(log.current_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.highest_price %}${{ "%.2f"|format(log.highest_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.trailing_stop_price %}${{ "%.2f"|format(log.trailing_stop_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.atr_value %}{{ "%.4f"|format(log.atr_value) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if log.profit_pct is not none %}
+                            <span class="{{ 'text-profit' if log.profit_pct >= 0 else 'text-loss' }}">
+                                {{ "%.2f"|format(log.profit_pct) }}%
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="small text-muted" style="max-width: 250px; word-break: break-word;">{{ log.details or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center text-muted py-4">
+        <p>No events recorded yet</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

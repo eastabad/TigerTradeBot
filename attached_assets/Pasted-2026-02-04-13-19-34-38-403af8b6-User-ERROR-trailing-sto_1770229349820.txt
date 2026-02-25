@@ -1,0 +1,140 @@
+2026-02-04 13:19:34.38
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]IMOS: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:34.38
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]IMOS (paper)
+2026-02-04 13:19:35.08
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]INDI (paper)
+2026-02-04 13:19:35.08
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]INDI: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:35.68
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]AIP: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:35.68
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]AIP (paper)
+2026-02-04 13:19:36.38
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]VST: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:36.38
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]VST (paper)
+2026-02-04 13:19:36.98
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]WST: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:36.98
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]WST (paper)
+2026-02-04 13:19:37.68
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]PXLW (paper)
+2026-02-04 13:19:37.68
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]PXLW: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:38.58
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]NBIS (paper)
+2026-02-04 13:19:38.58
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]NBIS: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:39.19
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]WKEY (paper)
+2026-02-04 13:19:39.68
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]WKEY: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:40.28
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]AMAT: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:40.28
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]AMAT (paper)
+2026-02-04 13:19:40.68
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]QUIK: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:40.68
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]QUIK (paper)
+2026-02-04 13:19:41.38
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]TER: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:41.38
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]TER (paper)
+2026-02-04 13:19:41.62
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]NVEC (paper)
+2026-02-04 13:19:41.77
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]MU: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:41.77
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]MU (paper)
+2026-02-04 13:19:41.98
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]AMD: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:41.98
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]AMD (paper)
+2026-02-04 13:19:42.48
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]EBAY (paper)
+2026-02-04 13:19:42.48
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]EBAY: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:42.98
+403af8b6
+User
+INFO:trailing_stop_scheduler:📊 Fallback: Detected closed position for [PAPER]PLTR (paper)
+2026-02-04 13:19:43.78
+403af8b6
+User
+ERROR:trailing_stop_scheduler:Error processing fallback for [PAPER]AMZN: 'TrailingStopPosition' object has no attribute 'current_price'
+2026-02-04 13:19:44.28
+403af8b6
+User
+"command": "HEARTBEAT",
+2026-02-04 13:19:44.28
+403af8b6
+User
+DEBUG:root:sending a heartbeat message at 16879.756098744
+2026-02-04 13:19:44.28
+403af8b6
+User
+DEBUG:root:sending frame: {
+2026-02-04 13:19:44.28
+403af8b6
+User
+"id": 1615

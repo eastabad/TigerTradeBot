@@ -1,0 +1,174 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Signal Logs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-satellite-dish me-2"></i>Signal Logs</h4>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body py-2">
+                <div class="text-muted small">Total Signals</div>
+                <div class="fs-4 fw-bold monospace">{{ total_signals }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card profit">
+            <div class="card-body py-2">
+                <div class="text-muted small">Executed</div>
+                <div class="fs-4 fw-bold monospace text-profit">{{ executed_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card loss">
+            <div class="card-body py-2">
+                <div class="text-muted small">Errors</div>
+                <div class="fs-4 fw-bold monospace text-loss">{{ error_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if success_rate >= 80 %}profit{% elif success_rate >= 50 %}neutral{% else %}loss{% endif %}">
+            <div class="card-body py-2">
+                <div class="text-muted small">Success Rate</div>
+                <div class="fs-4 fw-bold monospace">{{ "%.1f"|format(success_rate) }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Symbol</label>
+                <input type="text" class="form-control form-control-sm" name="symbol" 
+                       value="{{ symbol_filter }}" placeholder="e.g. AAPL">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select class="form-select form-select-sm" name="status">
+                    <option value="">All</option>
+                    <option value="received" {% if status_filter == 'received' %}selected{% endif %}>Received</option>
+                    <option value="parsed" {% if status_filter == 'parsed' %}selected{% endif %}>Parsed</option>
+                    <option value="executed" {% if status_filter == 'executed' %}selected{% endif %}>Executed</option>
+                    <option value="error" {% if status_filter == 'error' %}selected{% endif %}>Error</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Action</label>
+                <select class="form-select form-select-sm" name="action">
+                    <option value="">All</option>
+                    <option value="buy" {% if action_filter == 'buy' %}selected{% endif %}>Buy</option>
+                    <option value="sell" {% if action_filter == 'sell' %}selected{% endif %}>Sell</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-sm btn-outline-primary me-1">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+                <a href="{{ url_for('alpaca.alpaca_signals') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if signals.items %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Time</th>
+                        <th>Source</th>
+                        <th>Symbol</th>
+                        <th>Action</th>
+                        <th>Status</th>
+                        <th>Error</th>
+                        <th>Trade ID</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for signal in signals.items %}
+                    <tr>
+                        <td class="monospace">{{ signal.id }}</td>
+                        <td class="monospace text-muted small">{{ signal.created_at.strftime('%m/%d %H:%M:%S') }}</td>
+                        <td class="small">{{ signal.source or '-' }}</td>
+                        <td class="fw-bold">{{ signal.symbol or '-' }}</td>
+                        <td>
+                            {% if signal.action %}
+                            <span class="badge {% if signal.action == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ signal.action|upper }}
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if signal.status == 'executed' %}bg-success
+                                {% elif signal.status == 'error' %}bg-danger
+                                {% elif signal.status == 'parsed' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ signal.status|upper }}
+                            </span>
+                        </td>
+                        <td class="small text-danger">{{ (signal.error_message or '')[:40] }}</td>
+                        <td class="monospace">{{ signal.trade_id or '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('alpaca.alpaca_signal_detail', signal_id=signal.id) }}" 
+                               class="btn btn-sm btn-outline-secondary py-0 px-1">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if signals.pages > 1 %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if signals.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_signals', page=signals.prev_num, symbol=symbol_filter, status=status_filter, action=action_filter) }}">Prev</a>
+                    </li>
+                    {% endif %}
+                    {% for p in signals.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == signals.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('alpaca.alpaca_signals', page=p, symbol=symbol_filter, status=status_filter, action=action_filter) }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if signals.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_signals', page=signals.next_num, symbol=symbol_filter, status=status_filter, action=action_filter) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No signal logs found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

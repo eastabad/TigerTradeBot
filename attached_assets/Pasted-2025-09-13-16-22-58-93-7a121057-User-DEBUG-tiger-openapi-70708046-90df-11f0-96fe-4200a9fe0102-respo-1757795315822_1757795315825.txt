@@ -1,0 +1,16 @@
+2025-09-13 16:22:58.93
+7a121057
+User
+DEBUG:tiger_openapi:[70708046-90df-11f0-96fe-4200a9fe0102]response:{"code":0,"message":"success","timestamp":1757794978844,"data":{"symbol":"NVDL","market":"US","secType":"STK","currency":"USD","identifier":"NVDL","id":40483511546155008,"externalId":"253","orderId":253,"account":"50904193","action":"BUY","orderType":"LMT","limitPrice":450.25,"totalQuantity":5,"totalQuantityScale":0,"filledQuantity":0,"filledQuantityScale":0,"filledCashAmount":0.0,"avgFillPrice":0.0,"timeInForce":"DAY","outsideRth":true,"commission":0.0,"gst":0.0,"realizedPnl":0.0,"remark":"订单委托价格超过限制（最新价±10%变动幅度）, 请调整订单委托价格并重新提交订单，若有疑问请联系老虎客服+65 6331 2277。","liquidation":false,"openTime":1757763881000,"updateTime":1757763881000,"latestTime":1757763881000,"name":"GraniteShares 2x Long NVDA Daily ETF","latestPrice":85.71,"attrDesc":"","userMark":"","attrList":["ATTACHED_ORDER"],"algoStrategy":"LMT","status":"Invalid","source":"OpenApi","discount":0,"replaceStatus":"NONE","cancelStatus":"NONE","canModify":false,"canCancel":false,"isOpen":true,"orderDiscount":0,"tradingSessionType":"PRE_RTH_POST"},"sign":"SfLgb8F1tXwJlNcq8XU0Z7AGzWheTtaK2ir/b9FIzImfNNN3R0x/1JASBGyjsBHBocsVqVuS2MPQAcgorYtiyfcChotmBw7MT3+GZKKayVNxsadiDtOIT4/oUImcCU23r/riWnICSHhLPiPk8TRFDK+eaFOy0+HFcaHwbVItIbA="}
+2025-09-13 16:23:00.72
+7a121057
+User
+DEBUG:tiger_openapi:[7181de4e-90df-11f0-96fe-4200a9fe0102]response:{"code":0,"message":"success","timestamp":1757794980635,"data":{"symbol":"NVDL","market":"US","secType":"STK","currency":"USD","identifier":"NVDL","id":40483502125091840,"externalId":"250","orderId":250,"account":"50904193","action":"BUY","orderType":"LMT","limitPrice":450.25,"totalQuantity":10,"totalQuantityScale":0,"filledQuantity":0,"filledQuantityScale":0,"filledCashAmount":0.0,"avgFillPrice":0.0,"timeInForce":"DAY","outsideRth":true,"commission":0.0,"gst":0.0,"realizedPnl":0.0,"remark":"订单委托价格超过限制（最新价±10%变动幅度）, 请调整订单委托价格并重新提交订单，若有疑问请联系老虎客服+65 6331 2277。","liquidation":false,"openTime":1757763809000,"updateTime":1757763809000,"latestTime":1757763809000,"name":"GraniteShares 2x Long NVDA Daily ETF","latestPrice":85.71,"attrDesc":"","userMark":"","attrList":["ATTACHED_ORDER"],"algoStrategy":"LMT","status":"Invalid","source":"OpenApi","discount":0,"replaceStatus":"NONE","cancelStatus":"NONE","canModify":false,"canCancel":false,"isOpen":true,"orderDiscount":0,"tradingSessionType":"PRE_RTH_POST"},"sign":"bZm4XIdYoFXFkjVN3xfDENeA0jJv7zRyLFxQsZ7TPocyOtzLBRiZktoh4k4r1RtwBF1zgLlQxgiUh/4Y6jcbUhPjmo989N980pg8M3K451YhvbmE3uzkdVyFLbKJkpW9ukQ14ooACTWlGKhYFinHsqrR7S2BaGZDpDUPFerRBl0="}
+2025-09-13 16:23:07.08
+7a121057
+User
+INFO:routes:Received webhook from 34.30.225.124: {"ticker": "NVDL", "action": "buy", "quantity": 50, "referencePrice": 450.25, "take_profit": 455.0, "stop_loss": 448.0, "stockprice": 171.69, "original_symbol": "NVDA", "original_action": "buy", "timeframe": "15m", "is_flat_signal": false, "etf_calculation": {"etf_qty": 50, "base_quantity": 10}}
+2025-09-13 16:23:07.08
+7a121057
+User
+INFO:signal_parser:Signal parsed successfully: {'symbol': 'NVDL', 'is_close_signal': False, 'side': 'buy', 'quantity': 50.0, 'order_type': 'limit', 'stop_loss': 448.0, 'take_profit': 455.0, 'reference_price': 450.25, 'trading_session': 'extended', 'outside_rth': True, 'price': 450.25, 'time_in_force': 'day'}

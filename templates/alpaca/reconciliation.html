@@ -1,0 +1,381 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Reconciliation - Alpaca{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Reconciliation & Data Integrity</h4>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card neutral">
+            <div class="card-body py-2">
+                <div class="small text-muted">Total Fills Stored</div>
+                <div class="h5 mb-0 monospace">{{ summary.total_fills }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card profit">
+            <div class="card-body py-2">
+                <div class="small text-muted">Reconciled</div>
+                <div class="h5 mb-0 monospace text-profit">{{ summary.reconciled_fills }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if summary.unreconciled_fills > 0 %}loss{% else %}profit{% endif %}">
+            <div class="card-body py-2">
+                <div class="small text-muted">Unreconciled</div>
+                <div class="h5 mb-0 monospace {% if summary.unreconciled_fills > 0 %}text-loss{% else %}text-profit{% endif %}">
+                    {{ summary.unreconciled_fills }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body py-2">
+                <div class="small text-muted">Reconciliation %</div>
+                <div class="h5 mb-0 monospace">{{ "%.1f"|format(summary.reconciliation_pct) }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-download me-2"></i>Fetch & Reconcile</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Fetch fill activities from Alpaca API and reconcile against stored positions.
+                </p>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <form method="post" action="{{ url_for('alpaca.alpaca_reconciliation_action') }}" class="d-inline">
+                        <input type="hidden" name="action" value="fetch_fills">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-cloud-download-alt me-1"></i>Fetch Fills Only
+                        </button>
+                    </form>
+
+                    <form method="post" action="{{ url_for('alpaca.alpaca_reconciliation_action') }}" class="d-inline">
+                        <input type="hidden" name="action" value="reconcile_today">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-sync me-1"></i>Reconcile Today
+                        </button>
+                    </form>
+
+                    <form method="post" action="{{ url_for('alpaca.alpaca_reconciliation_action') }}" class="d-inline"
+                          onsubmit="return confirm('This will reset all reconciliation flags and re-process all history. Continue?')">
+                        <input type="hidden" name="action" value="reconcile_history">
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <input type="number" name="days_back" value="30" min="1" max="365"
+                                   class="form-control" style="width: 70px;" placeholder="Days">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-history me-1"></i>Full History
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Position Backfill</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Rebuild positions from stored fill data. Use when positions are missing or inconsistent.
+                </p>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <form method="post" action="{{ url_for('alpaca.alpaca_reconciliation_action') }}" class="d-inline"
+                          onsubmit="return confirm('This will rebuild positions from fill history. Existing positions for the date range will NOT be cleared unless you check the box. Continue?')">
+                        <input type="hidden" name="action" value="backfill">
+                        <div class="d-flex gap-2 align-items-center">
+                            <button type="submit" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-hammer me-1"></i>Backfill Positions
+                            </button>
+                            <div class="form-check form-check-inline ms-2">
+                                <input class="form-check-input" type="checkbox" name="clear_existing" id="clearExisting">
+                                <label class="form-check-label small" for="clearExisting">Clear existing</label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-ghost me-2"></i>Ghost Position Cleanup</h6>
+                <span class="badge bg-{% if ghost_positions %}danger{% else %}success{% endif %}">
+                    {{ ghost_positions|length }} ghost{{ 's' if ghost_positions|length != 1 }}
+                    / {{ open_count }} open / {{ holdings_count }} in Alpaca
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Detect and close "ghost" positions: marked OPEN in database but no longer exist in Alpaca account.
+                    {% if ghost_source == 'alpaca_api' %}
+                    <span class="badge bg-success">Live API</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Cached Holdings</span>
+                    {% endif %}
+                </p>
+
+                {% if ghost_error %}
+                <div class="alert alert-warning py-2 mb-3 small">
+                    <i class="fas fa-exclamation-triangle me-1"></i> {{ ghost_error }}
+                </div>
+                {% endif %}
+
+                {% if ghost_positions %}
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Side</th>
+                                <th class="text-end">Remaining Qty</th>
+                                <th class="text-end">Avg Entry</th>
+                                <th>Opened</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for g in ghost_positions %}
+                            <tr>
+                                <td><strong>{{ g.symbol }}</strong></td>
+                                <td><span class="badge bg-{{ 'success' if g.side == 'long' else 'danger' }}">{{ g.side }}</span></td>
+                                <td class="text-end monospace">{{ g.remaining }}</td>
+                                <td class="text-end monospace">${{ "%.2f"|format(g.avg_entry_price or 0) }}</td>
+                                <td class="small text-muted">{{ g.created_at.strftime('%m/%d %H:%M') if g.created_at else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-success py-2 mb-3">
+                    <i class="fas fa-check-circle me-1"></i> No ghost positions detected. All DB positions match Alpaca holdings.
+                </div>
+                {% endif %}
+
+                <form method="post" action="{{ url_for('alpaca.alpaca_reconciliation_action') }}" class="d-inline"
+                      onsubmit="return confirm('This will close {{ ghost_positions|length }} ghost position(s) in the database. Continue?')">
+                    <input type="hidden" name="action" value="ghost_reconcile">
+                    <button type="submit" class="btn btn-warning btn-sm" {% if not ghost_positions %}disabled{% endif %}>
+                        <i class="fas fa-broom me-1"></i>Clean Up {{ ghost_positions|length }} Ghost Position{{ 's' if ghost_positions|length != 1 }}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if summary.latest_run %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Latest Run</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 140px;">Date</td>
+                        <td class="monospace">{{ summary.latest_run.run_date }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Type</td>
+                        <td><span class="badge bg-secondary">{{ summary.latest_run.run_type }}</span></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Status</td>
+                        <td>
+                            {% if summary.latest_run.status == 'completed' %}
+                            <span class="badge bg-success">Completed</span>
+                            {% elif summary.latest_run.status == 'failed' %}
+                            <span class="badge bg-danger">Failed</span>
+                            {% elif summary.latest_run.status == 'running' %}
+                            <span class="badge bg-warning text-dark">Running</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ summary.latest_run.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Started</td>
+                        <td class="monospace">{{ summary.latest_run.started_at.strftime('%Y-%m-%d %H:%M:%S') if summary.latest_run.started_at else '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width: 160px;">Activities Fetched</td>
+                        <td class="monospace">{{ summary.latest_run.total_activities_fetched or 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">New Fills Stored</td>
+                        <td class="monospace">{{ summary.latest_run.new_fills_stored or 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Positions Matched</td>
+                        <td class="monospace">{{ summary.latest_run.positions_matched or 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Records Corrected</td>
+                        <td class="monospace">{{ summary.latest_run.records_corrected or 0 }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% if summary.latest_run.details %}
+        <div class="mt-3">
+            <label class="small text-muted">Details:</label>
+            <pre class="bg-dark border rounded p-2 small mb-0" style="max-height: 200px; overflow-y: auto;">{{ summary.latest_run.details }}</pre>
+        </div>
+        {% endif %}
+        {% if summary.latest_run.error_message %}
+        <div class="alert alert-danger mt-2 mb-0 small">
+            <strong>Error:</strong> {{ summary.latest_run.error_message }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-history me-2"></i>Run History</h6>
+        <span class="badge bg-secondary">{{ summary.recent_runs|length }} runs</span>
+    </div>
+    <div class="card-body p-0">
+        {% if summary.recent_runs %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th class="text-end">Fetched</th>
+                        <th class="text-end">New</th>
+                        <th class="text-end">Matched</th>
+                        <th class="text-end">Corrected</th>
+                        <th class="text-end">Created</th>
+                        <th>Started</th>
+                        <th>Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for run in summary.recent_runs %}
+                    <tr>
+                        <td class="monospace">{{ run.id }}</td>
+                        <td class="monospace">{{ run.run_date }}</td>
+                        <td><span class="badge bg-secondary">{{ run.run_type }}</span></td>
+                        <td>
+                            {% if run.status == 'completed' %}
+                            <span class="badge bg-success">OK</span>
+                            {% elif run.status == 'failed' %}
+                            <span class="badge bg-danger">FAIL</span>
+                            {% elif run.status == 'running' %}
+                            <span class="badge bg-warning text-dark">RUN</span>
+                            {% elif run.status == 'skipped' %}
+                            <span class="badge bg-info">SKIP</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ run.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end monospace">{{ run.total_activities_fetched or 0 }}</td>
+                        <td class="text-end monospace">{{ run.new_fills_stored or 0 }}</td>
+                        <td class="text-end monospace">{{ run.positions_matched or 0 }}</td>
+                        <td class="text-end monospace">{{ run.records_corrected or 0 }}</td>
+                        <td class="text-end monospace">{{ run.records_created or 0 }}</td>
+                        <td class="monospace small">{{ run.started_at.strftime('%m-%d %H:%M') if run.started_at else '-' }}</td>
+                        <td class="monospace small">
+                            {% if run.started_at and run.finished_at %}
+                            {{ ((run.finished_at - run.started_at).total_seconds())|int }}s
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+            No reconciliation runs yet. Click "Reconcile Today" to start.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if unreconciled_fills %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Unreconciled Fills</h6>
+        <span class="badge bg-warning text-dark">{{ unreconciled_fills|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th class="text-end">Qty</th>
+                        <th class="text-end">Price</th>
+                        <th>Type</th>
+                        <th>Filled At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fill in unreconciled_fills[:50] %}
+                    <tr>
+                        <td class="monospace small">{{ fill.alpaca_order_id[:12] }}...</td>
+                        <td class="fw-bold">{{ fill.symbol }}</td>
+                        <td>
+                            {% if fill.side == 'buy' %}
+                            <span class="badge bg-success">BUY</span>
+                            {% else %}
+                            <span class="badge bg-danger">SELL</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end monospace">{{ fill.filled_qty or fill.quantity or 0 }}</td>
+                        <td class="text-end monospace">${{ "%.2f"|format(fill.filled_avg_price or 0) }}</td>
+                        <td class="small">{{ fill.order_type or '-' }}</td>
+                        <td class="monospace small">{{ fill.filled_at[:19] if fill.filled_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if unreconciled_fills|length > 50 %}
+        <div class="p-2 text-center text-muted small">
+            Showing 50 of {{ unreconciled_fills|length }} unreconciled fills
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

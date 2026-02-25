@@ -1,0 +1,22 @@
+services:
+  trading-app:
+    build: .
+    container_name: trading-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - ALPACA_API_KEY=${ALPACA_API_KEY}
+      - ALPACA_SECRET_KEY=${ALPACA_SECRET_KEY}
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - DISCORD_TTS_WEBHOOK_URL=${DISCORD_TTS_WEBHOOK_URL}
+      - EODHD_API_KEY=${EODHD_API_KEY}
+    volumes:
+      - ./tiger_keys:/app/tiger_keys:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"

@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Closed Trades - Trading System{% endblock %}
+
+{% block content %}
+<style>
+    /* Dark theme for accordion */
+    #tradesAccordion .accordion-item {
+        background-color: #212529 !important;
+        border-color: #343a40 !important;
+    }
+    #tradesAccordion .accordion-button {
+        background-color: #212529 !important;
+        color: #fff !important;
+        border-color: #343a40 !important;
+    }
+    #tradesAccordion .accordion-button:not(.collapsed) {
+        background-color: #2d3238 !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+    #tradesAccordion .accordion-button::after {
+        filter: invert(1);
+    }
+    #tradesAccordion .accordion-button:focus {
+        box-shadow: none !important;
+        border-color: #343a40 !important;
+    }
+</style>
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-money-bill-wave me-3"></i>Closed Trades with Forensics
+        </h1>
+        <p class="lead">View realized P&L and trace each exit back to entry signals (已平仓交易 + 溯源追踪)</p>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('closed_trades') }}" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Account Type</label>
+                        <select name="account_type" class="form-select">
+                            <option value="real" {% if account_type == 'real' %}selected{% endif %}>Real Account</option>
+                            <option value="paper" {% if account_type == 'paper' %}selected{% endif %}>Paper Account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Symbol</label>
+                        <input type="text" name="symbol" class="form-control" placeholder="e.g., TSLA" value="{{ symbol_filter or '' }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                        <a href="{{ url_for('closed_trades') }}" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </a>
+                        <button type="button" class="btn btn-warning" id="reconcileBtn" onclick="reconcileOrders()">
+                            <i class="fas fa-sync-alt me-1"></i>Reconcile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total P&L</h6>
+                <h3 class="mb-0 {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(total_pnl) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Trades</h6>
+                <h3 class="mb-0 text-info">{{ total_trades }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Win / Loss</h6>
+                <h3 class="mb-0">
+                    <span class="text-success">{{ winning_count }}</span>
+                    <span class="text-muted">/</span>
+                    <span class="text-danger">{{ losing_count }}</span>
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Win Rate</h6>
+                <h3 class="mb-0 {% if win_rate >= 50 %}text-success{% else %}text-warning{% endif %}">
+                    {{ "%.1f"|format(win_rate) }}%
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Profit Factor</h6>
+                <h3 class="mb-0 {% if profit_factor >= 1.5 %}text-success{% elif profit_factor >= 1 %}text-warning{% else %}text-danger{% endif %}">
+                    {% if profit_factor > 999 %}∞{% else %}{{ "%.2f"|format(profit_factor) }}{% endif %}
+                </h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trades Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Closed Trades ({{ trades|length }})</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                {% if trades %}
+                    <div class="accordion" id="tradesAccordion">
+                        {% for trade in trades %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ trade.id }}">
+                                <button class="accordion-button collapsed" type="button" 
+                                        data-bs-toggle="collapse" data-bs-target="#collapse{{ trade.id }}"
+                                        aria-expanded="false" aria-controls="collapse{{ trade.id }}">
+                                    <div class="d-flex w-100 justify-content-between align-items-center me-3">
+                                        <div class="d-flex align-items-center">
+                                            <strong class="me-3">{{ trade.symbol|replace('[PAPER]', '') }}</strong>
+                                            <span class="badge {% if trade.side == 'long' %}bg-success{% else %}bg-danger{% endif %} me-2">
+                                                {{ trade.side|upper }}
+                                            </span>
+                                            <span class="badge bg-secondary me-2">{{ trade.exit_method }}</span>
+                                            {% if trade.exit_indicator %}
+                                            <span class="badge bg-warning text-dark me-2">{{ trade.exit_indicator }}</span>
+                                            {% endif %}
+                                            <small class="text-muted">{{ trade.exit_time }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-info me-2">{{ trade.entry_count }} entries</span>
+                                            <span class="me-3" style="font-family: 'Roboto Mono', monospace;">
+                                                Qty: {{ trade.exit_quantity }}
+                                            </span>
+                                            <span class="{% if trade.total_pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold" 
+                                                  style="font-family: 'Roboto Mono', monospace; min-width: 100px; text-align: right;">
+                                                {% if trade.total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(trade.total_pnl) }}
+                                                ({{ "%.2f"|format(trade.total_pnl_pct) }}%)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="collapse{{ trade.id }}" class="accordion-collapse collapse" 
+                                 aria-labelledby="heading{{ trade.id }}" data-bs-parent="#tradesAccordion">
+                                <div class="accordion-body" style="background-color: #1a1d21;">
+                                    <!-- Exit Summary -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <div class="card bg-dark">
+                                                <div class="card-header py-2">
+                                                    <strong><i class="fas fa-sign-out-alt me-2"></i>Exit Details</strong>
+                                                </div>
+                                                <div class="card-body py-2">
+                                                    <table class="table table-sm table-borderless mb-0">
+                                                        <tr>
+                                                            <td class="text-muted">Exit Price:</td>
+                                                            <td style="font-family: 'Roboto Mono', monospace;">${{ "%.2f"|format(trade.exit_price or 0) }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted">Avg Entry Price:</td>
+                                                            <td style="font-family: 'Roboto Mono', monospace;">${{ "%.2f"|format(trade.avg_entry_price or 0) }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted">Exit Quantity:</td>
+                                                            <td style="font-family: 'Roboto Mono', monospace;">{{ trade.exit_quantity }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="text-muted">Exit Method:</td>
+                                                            <td><span class="badge bg-secondary">{{ trade.exit_method }}</span></td>
+                                                        </tr>
+                                                        {% if trade.exit_indicator %}
+                                                        <tr>
+                                                            <td class="text-muted">Exit Indicator:</td>
+                                                            <td><span class="badge bg-warning text-dark">{{ trade.exit_indicator }}</span></td>
+                                                        </tr>
+                                                        {% endif %}
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-dark">
+                                                <div class="card-header py-2">
+                                                    <strong><i class="fas fa-chart-pie me-2"></i>P&L Summary</strong>
+                                                </div>
+                                                <div class="card-body py-2 text-center">
+                                                    <h2 class="{% if trade.total_pnl >= 0 %}text-success{% else %}text-danger{% endif %} mb-1">
+                                                        {% if trade.total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(trade.total_pnl) }}
+                                                    </h2>
+                                                    <p class="mb-0 {% if trade.total_pnl_pct >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                        {{ "%.2f"|format(trade.total_pnl_pct) }}%
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Entry Signals -->
+                                    {% if trade.entry_signals %}
+                                    <div class="card bg-dark mb-3">
+                                        <div class="card-header py-2">
+                                            <strong><i class="fas fa-sign-in-alt me-2"></i>Entry Signals Consumed ({{ trade.entry_signals|length }})</strong>
+                                        </div>
+                                        <div class="card-body py-2">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Entry Time</th>
+                                                            <th>Type</th>
+                                                            <th>Qty</th>
+                                                            <th>Entry Price</th>
+                                                            <th>Contribution P&L</th>
+                                                            <th>Indicator</th>
+                                                            <th>Order ID</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for entry in trade.entry_signals %}
+                                                        <tr>
+                                                            <td><small class="text-muted">{{ entry.entry_time }}</small></td>
+                                                            <td>
+                                                                <span class="badge {% if entry.entry_type == 'initial' %}bg-primary{% else %}bg-warning{% endif %}">
+                                                                    {% if entry.entry_type == 'initial' %}Initial{% else %}Scale-in{% endif %}
+                                                                </span>
+                                                            </td>
+                                                            <td style="font-family: 'Roboto Mono', monospace;">{{ entry.quantity }}</td>
+                                                            <td style="font-family: 'Roboto Mono', monospace;">${{ "%.2f"|format(entry.entry_price or 0) }}</td>
+                                                            <td style="font-family: 'Roboto Mono', monospace;">
+                                                                {% if entry.contribution_pnl is not none %}
+                                                                <span class="{% if entry.contribution_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                                    {% if entry.contribution_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(entry.contribution_pnl) }}
+                                                                    ({{ "%.1f"|format(entry.contribution_pct or 0) }}%)
+                                                                </span>
+                                                                {% else %}
+                                                                <span class="text-muted">-</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td><small>{{ entry.indicator_trigger or '-' }}</small></td>
+                                                            <td><code class="small">{{ entry.entry_order_id or '-' }}</code></td>
+                                                        </tr>
+                                                        {% if entry.original_signal %}
+                                                        <tr style="background-color: #2d3238;">
+                                                            <td colspan="7">
+                                                                <details>
+                                                                    <summary class="text-light small" style="cursor: pointer;">
+                                                                        <i class="fas fa-code me-1"></i>Original Signal JSON
+                                                                    </summary>
+                                                                    <pre class="mb-0 mt-2 p-2 rounded text-light" style="font-size: 0.75rem; max-height: 200px; overflow-y: auto; background-color: #1a1d21;">{{ entry.original_signal }}</pre>
+                                                                </details>
+                                                            </td>
+                                                        </tr>
+                                                        {% endif %}
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="alert alert-secondary mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>No entry signals linked to this exit. (Historical trade before forensic tracking was enabled)
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Exit Signal -->
+                                    {% if trade.exit_signal_content %}
+                                    <div class="card bg-dark">
+                                        <div class="card-header py-2">
+                                            <strong><i class="fas fa-code me-2"></i>Exit Signal JSON</strong>
+                                        </div>
+                                        <div class="card-body py-2">
+                                            <pre class="mb-0 p-2 bg-dark rounded" style="font-size: 0.75rem; max-height: 200px; overflow-y: auto;">{{ trade.exit_signal_content }}</pre>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No closed trades found</h4>
+                        <p class="text-muted">
+                            Adjust your filter criteria or wait for trades to be completed.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<div class="modal fade" id="reconcileModal" tabindex="-1" aria-labelledby="reconcileModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reconcileModalLabel">
+                    <i class="fas fa-sync-alt me-2"></i>Reconciliation Result
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="reconcileResult">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="location.reload()">Refresh Page</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Closed Trades (Forensics) page initialized');
+});
+
+function reconcileOrders() {
+    const btn = document.getElementById('reconcileBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Reconciling...';
+    
+    const accountType = document.querySelector('select[name="account_type"]').value;
+    const startDate = document.querySelector('input[name="start_date"]').value;
+    const endDate = document.querySelector('input[name="end_date"]').value;
+    
+    fetch('/api/reconcile-orders', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            account_type: accountType,
+            start_date: startDate || null,
+            end_date: endDate || null
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        let html = '';
+        if (data.success) {
+            const stats = data.stats;
+            html = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>Reconciliation completed!
+                </div>
+                <p><strong>Account:</strong> ${data.account_type}</p>
+                <p><strong>Date Range:</strong> ${data.date_range}</p>
+                <hr>
+                <h6>Statistics:</h6>
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Total Tiger Orders</span>
+                        <span class="badge bg-info">${stats.total_orders}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Entry Records Created</span>
+                        <span class="badge bg-success">${stats.entries_created}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Exit Records Created</span>
+                        <span class="badge bg-success">${stats.exits_created}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Exit Records Updated</span>
+                        <span class="badge bg-warning">${stats.exits_updated}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Entries Linked to Exits</span>
+                        <span class="badge bg-primary">${stats.entries_linked}</span>
+                    </li>
+                </ul>
+            `;
+            if (stats.errors && stats.errors.length > 0) {
+                html += '<div class="alert alert-warning mt-3"><strong>Errors:</strong><br>' + stats.errors.join('<br>') + '</div>';
+            }
+        } else {
+            html = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error: ' + data.error + '</div>';
+        }
+        
+        document.getElementById('reconcileResult').innerHTML = html;
+        const modal = new bootstrap.Modal(document.getElementById('reconcileModal'));
+        modal.show();
+    })
+    .catch(error => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        document.getElementById('reconcileResult').innerHTML = '<div class="alert alert-danger">Network error: ' + error.message + '</div>';
+        const modal = new bootstrap.Modal(document.getElementById('reconcileModal'));
+        modal.show();
+    });
+}
+</script>
+{% endblock %}

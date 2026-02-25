@@ -1,0 +1,32 @@
+2026-01-21 11:03:28.61
+246542df
+User
+INFO:trailing_stop_engine:🛡️ [[PAPER]IREN] 反向保护触发: 亏损2.56%, 趋势强度21, 止损从$54.00收紧至$55.10 (收紧系数0.6)
+2026-01-21 11:03:28.61
+246542df
+User
+INFO:trailing_stop_engine:[[PAPER]IREN] 趋势强度: 21.0 (ATR收敛: 0.72, 动量: -0.99, 连续创新高: 0)
+2026-01-21 11:03:28.61
+246542df
+User
+INFO:trailing_stop_engine:📤 Sending external webhook [cancel] for [PAPER]IREN: {'ticker': '[PAPER]IREN', 'action': 'cancel'}
+2026-01-21 11:03:28.68
+483a281d
+User
+DEBUG:tiger_openapi:[b9604aca-f6e2-11f0-8f3e-4200a9fe0102]response:{"code":0,"message":"success","timestamp":1769011408592,"data":[{"symbol":"IREN","period":"15min","items":[{"time":1768932000000,"volume":794755,"open":55.425,"close":55.92,"high":56.0699,"low":55.29,"amount":4.4214234338134E7},{"time":1768932900000,"volume":552945,"open":55.92,"close":55.46,"high":56.0499,"low":55.45,"amount":3.0833606578661006E7},{"time":1768933800000,"volume":960979,"open":55.46,"close":54.8762,"high":55.65,"low":54.85,"amount":5.302307348051E7},{"time":1768934700000,"volume":1029531,"open":54.8762,"close":54.645,"high":54.9399,"low":54.49,"amount":5.6295430766889006E7},{"time":1768935600000,"volume":632355,"open":54.645,"close":54.795,"high":55.08,"low":54.6,"amount":3.4680473940658E7},{"time":1768936500000,"volume":883857,"open":54.795,"close":54.2,"high":54.8399,"low":54.0762,"amount":4.8098115391908996E7},{"time":1768937400000,"volume":1384046,"open":54.2,"close":53.7864,"high":54.21,"low":53.43,"amount":7.4391000636138E7},{"time":1768938300000,"volume":870432,"open":53.7864,"close":54.51,"high":54.59,"low":53.7145,"amount":4.7085295848152E7},{"time":1768939200000,"volume":891737,"open":54.51,"close":54.5,"high":54.79,"low":54.15,"amount":4.8587029282535E7},{"time":1768940100000,"volume":820554,"open":54.5,"close":54.72,"high":54.82,"low":54.2628,"amount":4.48069877747E7},{"time":1768941000000,"volume":998692,"open":54.73,"close":54.18,"high":54.73,"low":53.95,"amount":5.414279718324798E7},{"time":1768941900000,"volume":3829334,"open":54.18,"close":54.26,"high":54.445,"low":53.77,"amount":2.07608341924106E8},{"time":1769005800000,"volume":3358186,"open":55.98,"close":53.7,"high":57.0,"low":53.45,"amount":1.841241290476E8},{"time":1769006700000,"volume":1950642,"open":53.7,"close":55.4319,"high":55.7899,"low":53.66,"amount":1.069053142083E8},{"time":1769007600000,"volume":2345659,"open":55.4319,"close":56.345,"high":57.125,"low":55.33,"amount":1.3195021010450001E8},{"time":1769008500000,"volume":1862894,"open":56.345,"close":55.275,"high":57.19,"low":55.23,"amount":1.0520229799109997E8},{"time":1769009400000,"volume":1889013,"open":55.275,"close":55.44,"high":55.65,"low":54.7614,"amount":1.0420324361990006E8},{"time":1769010300000,"volume":1178317,"open":55.44,"close":55.66,"high":56.15,"low":55.0484,"amount":6.56648120563E7},{"time":1769011200000,"volume":189253,"open":55.66,"close":55.2899,"high":55.7,"low":55.25,"amount":1.0499844958999999E7}]}],"sign":"ELR6cSq1jGiqU+AXCITyTl6OPR0o3tmU2o6CzvE7toAVLUZoWAc+An28/do1imhyvohRFpkfZ5451vyAI06JYk3tm9Nn8Aeo7RKTGdnw2V3KndHoYpS6XtNbuIVXdPg54h7dNluVP0AsiQBGs1bNzg59wF1WFP3C7PDqp7uXNo0="}
+2026-01-21 11:03:28.68
+483a281d
+User
+DEBUG:urllib3.connectionpool:https://openapi.tigerfintech.com:443 "POST /hkg-quote/gateway HTTP/1.1" 200 None
+2026-01-21 11:03:29.06
+483a281d
+User
+INFO:trailing_stop_engine:[[PAPER]IREN] 趋势强度: 21.0 (ATR收敛: 0.72, 动量: -0.99, 连续创新高: 0)
+2026-01-21 11:03:29.06
+483a281d
+User
+INFO:tiger_client:Retrieved 19 bars for IREN (15min)
+2026-01-21 11:03:29.06
+483a281d
+User
+INFO:trailing_stop_engine:🛡️ [[PAPER]IREN] 反向保护触发: 亏损2.56%, 趋势强度21, 止损从$54.00收紧至$55.10 (收紧系数0.6)

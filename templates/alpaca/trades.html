@@ -1,0 +1,138 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Trades{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Trade History</h4>
+    <span class="text-muted">Total: {{ trades.total }} trades</span>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <input type="text" name="symbol" class="form-control form-control-sm" 
+                       placeholder="Symbol filter" value="{{ symbol_filter }}">
+            </div>
+            <div class="col-auto">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="new" {% if status_filter == 'new' %}selected{% endif %}>New</option>
+                    <option value="filled" {% if status_filter == 'filled' %}selected{% endif %}>Filled</option>
+                    <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    <option value="rejected" {% if status_filter == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                <a href="{{ url_for('alpaca.alpaca_trades') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if trades.items %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Time</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Filled</th>
+                        <th>Status</th>
+                        <th>SL / TP</th>
+                        <th>Order ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trade in trades.items %}
+                    <tr>
+                        <td class="monospace">{{ trade.id }}</td>
+                        <td class="monospace text-muted small">{{ trade.created_at.strftime('%m/%d %H:%M:%S') }}</td>
+                        <td class="fw-bold">{{ trade.symbol }}</td>
+                        <td>
+                            <span class="badge {% if trade.side.value == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ trade.side.value|upper }}
+                            </span>
+                            {% if trade.is_close_position %}
+                            <span class="badge bg-warning text-dark ms-1">CLOSE</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">{{ trade.order_type.value|upper }}</td>
+                        <td class="monospace">{{ trade.quantity }}</td>
+                        <td class="monospace">
+                            {% if trade.price %}${{ "%.2f"|format(trade.price) }}{% else %}-{% endif %}
+                        </td>
+                        <td class="monospace">
+                            {% if trade.filled_price %}
+                                ${{ "%.2f"|format(trade.filled_price) }} x {{ trade.filled_quantity or '' }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ trade.status.value }}">
+                                {{ trade.status.value|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace small">
+                            {% if trade.stop_loss_price %}
+                                <span class="text-loss">${{ "%.2f"|format(trade.stop_loss_price) }}</span>
+                            {% endif %}
+                            {% if trade.stop_loss_price and trade.take_profit_price %}/{% endif %}
+                            {% if trade.take_profit_price %}
+                                <span class="text-profit">${{ "%.2f"|format(trade.take_profit_price) }}</span>
+                            {% endif %}
+                            {% if not trade.stop_loss_price and not trade.take_profit_price %}-{% endif %}
+                        </td>
+                        <td class="monospace text-muted small">{{ (trade.alpaca_order_id or '-')[:12] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if trades.pages > 1 %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if trades.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_trades', page=trades.prev_num, symbol=symbol_filter, status=status_filter) }}">Prev</a>
+                    </li>
+                    {% endif %}
+                    {% for p in trades.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == trades.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('alpaca.alpaca_trades', page=p, symbol=symbol_filter, status=status_filter) }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if trades.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_trades', page=trades.next_num, symbol=symbol_filter, status=status_filter) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No trades found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

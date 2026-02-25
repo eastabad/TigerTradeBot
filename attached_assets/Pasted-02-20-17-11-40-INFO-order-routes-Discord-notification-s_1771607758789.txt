@@ -1,0 +1,30 @@
+02-20 17:11:40	INFO	order		routes	Discord notification sent with real Tiger data: filled, price: 208.16
+02-20 17:11:40	INFO	order		routes	✅ Created/updated trailing stop #12 for AMZN on immediate fill
+02-20 17:11:40	INFO	order		push_event_handlers	📋 WebSocket order event: AMZN SELL status=CANCELLED filled=3 @ $0
+02-20 17:11:40	INFO	order		tiger_push_client	📋 Order update received: id: 42298022261557248 account: "41592544" symbol: "AMZN" identifier: "AMZN" multiplier: 1 action: "SELL" market: "US" currency: "USD" segType: "S" secType: "STK" orderType: "LMT" isLong: true totalQuantity: 3 limitPrice: 213.1 status: "CANCELLED" replaceStatus: "NONE" cancelStatus: "NONE" name: "亚马逊" source: "OpenAPI" errorMsg: "手动撤单" openTime: 1771607499000 timestamp: 1771607500811 timeInForce: "GTC"
+02-20 17:11:40	INFO	trailing_stop		trailing_stop_engine	Updated existing trailing stop for AMZN
+02-20 17:11:40	INFO	order		trailing_stop_engine	🔍 [TRACE] create_trailing_stop_for_trade called: symbol=AMZN, quantity=3, side=long, entry_price=208.16, trade_id=18, account_type=real, SL=206.72, TP=213.1, sl_order_id=None, tp_order_id=None
+02-20 17:11:40	INFO	order		routes	📊 Entry fill processed via OrderTracker: already_filled
+02-20 17:11:40	ERROR	trailing_stop		routes	加仓止损优化异常: code=4 msg=4000:permission denied(Current user and device do not have permissions in the US market)
+02-20 17:11:40	ERROR	error		tiger_client	Error getting latest trade for AMZN: code=4 msg=4000:permission denied(Current user and device do not have permissions in the US market)
+02-20 17:11:40	INFO	order		push_event_handlers	📋 WebSocket order event: AMZN SELL status=EXPIRED filled=3 @ $0
+02-20 17:11:40	INFO	order		tiger_push_client	📋 Order update received: id: 42298022388828160 account: "41592544" symbol: "AMZN" identifier: "AMZN" multiplier: 1 action: "SELL" market: "US" currency: "USD" segType: "S" secType: "STK" orderType: "LMT" isLong: true totalQuantity: 3 limitPrice: 213.1 status: "EXPIRED" replaceStatus: "NONE" cancelStatus: "NONE" name: "亚马逊" source: "OpenAPI" errorMsg: "您下单的数量超过了您可用的持仓数量；如您想反向开仓，需要先平仓后才能开新仓" openTime: 1771607500000 timestamp: 1771607500775 timeInForce: "GTC"
+02-20 17:11:40	INFO	trailing_stop		routes	✅ 加仓后更新TrailingStop成功: 加仓更新成功: qty 3.0->3, entry $208.16->$208.16
+02-20 17:11:40	INFO	order		trailing_stop_engine	新止盈: $213.10, 止盈订单ID: 42298022388828160
+02-20 17:11:40	INFO	order		trailing_stop_engine	新止损: $206.72, 止损订单ID: None
+02-20 17:11:40	INFO	general		trailing_stop_engine	✅ 加仓更新 AMZN (real): 加仓更新成功: qty 3.0->3, entry $208.16->$208.16
+02-20 17:11:40	INFO	trailing_stop		trailing_stop_engine	📊 加仓更新 AMZN: 更新止盈 TP=$213.10 (阶梯止损阶段)
+02-20 17:11:40	INFO	trailing_stop		trailing_stop_engine	📊 加仓更新 AMZN: 保持原止损 $206.72 (新信号止损$206.72更低)
+02-20 17:11:40	INFO	order		tbus.tbus_protection_service	[TBUS] Protection created for AMZN: stop=$206.72, tp=$213.1, OCAGroup ID=11 (source=webhook_immediate)
+02-20 17:11:40	INFO	websocket		tbus.tbus_quote_ws	EODHD subscribe queued: [] (total: 3)
+02-20 17:11:40	INFO	order		order_tracker_service	📋 Registered order 42298022388828160: AMZN take_profit (real)
+02-20 17:11:40	INFO	order		tbus.tbus_client	[TBUS] OCAGroup record created: ID=11, group=TBUS-AMZN-1771607500
+02-20 17:11:40	INFO	trailing_stop		tbus.tbus_client	[TBUS] GTC LMT take profit placed: 42298022388828160 at $213.1 (outside_rth=False)
+02-20 17:11:40	INFO	order		tbus.tbus_client	[TBUS] Skipping stop loss order (SL=$206.72) — TBUS uses software trailing stop for SL to avoid position hold conflicts. SL managed by trailing stop engine.
+02-20 17:11:40	INFO	order		tbus.tbus_client	[TBUS] Cancelled existing orders for AMZN
+02-20 17:11:40	INFO	order		tiger_client	Canceled 1 out of 1 orders for AMZN
+02-20 17:11:40	INFO	order		tiger_client	Successfully canceled order 42298022261557248
+02-20 17:11:40	INFO	order		tiger_client	Cancel order 42298022261557248 result: 42298022261557248
+02-20 17:11:40	INFO	order		tiger_client	Processing order 42298022261557248 for AMZN - CanCancel: True
+02-20 17:11:40	INFO	order		tiger_client	Open order: 42298022261557248 - SELL 3 AMZN @ 213.1 - Status: OrderStatus.HELD - CanCancel: True
+02-20 17:11:40	INFO	order		tiger_client	Retrieved 1 open orders for AMZN

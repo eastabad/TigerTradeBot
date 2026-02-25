@@ -1,0 +1,434 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Order Monitor - Alpaca{% endblock %}
+
+{% block content %}
+<style>
+    .stage-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    .stage-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #333;
+    }
+    .stage-item {
+        position: relative;
+        margin-bottom: 0.75rem;
+        padding: 0.6rem 0.8rem;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+    }
+    .stage-item::before {
+        content: '';
+        position: absolute;
+        left: -1.6rem;
+        top: 1rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #333;
+        background: #1a1a2e;
+        z-index: 1;
+    }
+    .stage-item.status-ok::before { border-color: #00c087; background: #00c087; }
+    .stage-item.status-error::before { border-color: #f6465d; background: #f6465d; }
+    .stage-item.status-warning::before { border-color: #f0b90b; background: #f0b90b; }
+    .stage-item.status-pending::before { border-color: #6c757d; background: transparent; }
+    .stage-item.status-skipped::before { border-color: #444; background: #444; }
+
+    .stage-item.status-ok { border-left: 3px solid #00c087; }
+    .stage-item.status-error { border-left: 3px solid #f6465d; background: rgba(246,70,93,0.05); }
+    .stage-item.status-warning { border-left: 3px solid #f0b90b; background: rgba(240,185,11,0.05); }
+    .stage-item.status-pending { border-left: 3px solid #6c757d; }
+    .stage-item.status-skipped { border-left: 3px solid #444; opacity: 0.6; }
+
+    .stage-name { font-weight: 600; font-size: 0.9rem; }
+    .stage-msg { font-size: 0.85rem; margin-top: 0.15rem; }
+    .stage-time { font-size: 0.75rem; color: #888; }
+    .stage-details { font-size: 0.8rem; margin-top: 0.4rem; padding: 0.4rem; background: rgba(0,0,0,0.2); border-radius: 4px; font-family: 'Roboto Mono', monospace; }
+    .stage-details div { margin-bottom: 2px; }
+
+    .health-card { cursor: pointer; transition: transform 0.1s; }
+    .health-card:hover { transform: translateY(-2px); }
+
+    .related-logs-section { margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.3); border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); }
+    .related-logs-section summary { font-size: 0.8rem; font-weight: 600; color: #aaa; cursor: pointer; }
+    .related-logs-section summary:hover { color: #ddd; }
+    .log-entry { font-size: 0.78rem; padding: 0.3rem 0.5rem; margin-bottom: 2px; border-radius: 3px; background: rgba(0,0,0,0.2); font-family: 'Roboto Mono', monospace; word-break: break-all; }
+    .log-entry.level-ERROR, .log-entry.level-CRITICAL { border-left: 2px solid #f6465d; }
+    .log-entry.level-WARNING { border-left: 2px solid #f0b90b; }
+    .log-entry .log-meta { color: #888; font-size: 0.72rem; }
+    .log-entry .log-msg { color: #ddd; margin-top: 1px; }
+
+    .issue-row { border-left: 3px solid transparent; padding: 0.4rem 0.6rem; margin-bottom: 0.3rem; border-radius: 4px; background: rgba(255,255,255,0.03); }
+    .issue-row.severity-error { border-left-color: #f6465d; }
+    .issue-row.severity-warning { border-left-color: #f0b90b; }
+
+    .lifecycle-card { border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 1.5rem; }
+    .lifecycle-header { padding: 0.8rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.06); }
+
+    .badge-status-ok { background-color: #00c087; color: #fff; }
+    .badge-status-error { background-color: #f6465d; color: #fff; }
+    .badge-status-warning { background-color: #f0b90b; color: #000; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Order Monitor</h4>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <input type="text" name="symbol" class="form-control form-control-sm"
+                       placeholder="Symbol (e.g. AAPL)" value="{{ symbol }}" style="width: 120px;">
+            </div>
+            <div class="col-auto">
+                <input type="text" name="order_id" class="form-control form-control-sm"
+                       placeholder="Order ID" value="{{ order_id }}" style="width: 280px;">
+            </div>
+            <div class="col-auto">
+                <input type="text" name="position_id" class="form-control form-control-sm"
+                       placeholder="Position ID" value="{{ position_id }}" style="width: 100px;">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-search me-1"></i>Search</button>
+                <a href="{{ url_for('alpaca.alpaca_monitor') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if health %}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card {% if health.error_count > 0 %}loss{% else %}profit{% endif %} health-card">
+            <div class="card-body py-2 text-center">
+                <div class="fs-3 fw-bold {% if health.error_count > 0 %}text-loss{% else %}text-profit{% endif %}">{{ health.error_count }}</div>
+                <div class="text-muted small">Errors</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card neutral health-card">
+            <div class="card-body py-2 text-center">
+                <div class="fs-3 fw-bold" style="color: #f0b90b;">{{ health.warning_count }}</div>
+                <div class="text-muted small">Warnings</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card profit health-card">
+            <div class="card-body py-2 text-center">
+                <div class="fs-3 fw-bold text-profit">{{ health.ok_count }}</div>
+                <div class="text-muted small">Healthy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card info health-card">
+            <div class="card-body py-2 text-center">
+                <div class="fs-3 fw-bold">{{ health.total_open }}</div>
+                <div class="text-muted small">Open Positions</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if health.issues %}
+<div class="card mb-4">
+    <div class="card-header py-2">
+        <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Issues ({{ health.issues|length }})</h6>
+    </div>
+    <div class="card-body py-2">
+        {% for issue in health.issues %}
+        <div class="issue-row severity-{{ issue.severity }}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    {% if issue.severity == 'error' %}
+                    <span class="badge bg-danger me-1">ERROR</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark me-1">WARN</span>
+                    {% endif %}
+                    <strong>{{ issue.symbol }}</strong>
+                    <span class="ms-2">{{ issue.message }}</span>
+                </div>
+                <div>
+                    {% if issue.position_id %}
+                    <a href="{{ url_for('alpaca.alpaca_monitor', position_id=issue.position_id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                        <i class="fas fa-search"></i>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('alpaca.alpaca_monitor', symbol=issue.symbol) }}" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                        <i class="fas fa-search"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% if issue.detail %}
+            <div class="text-muted small mt-1" style="margin-left: 4rem;">{{ issue.detail }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+{% if search_performed %}
+<hr class="my-3">
+{% if lifecycles is not none and lifecycles|length > 0 %}
+    <h5 class="mb-3">
+        <i class="fas fa-project-diagram me-2"></i>
+        {% if symbol %}{{ symbol }}{% elif order_id %}Order {{ order_id[:12] }}...{% elif position_id %}Position #{{ position_id }}{% endif %}
+        <span class="text-muted ms-2 small">({{ lifecycles|length }} result{{ 's' if lifecycles|length > 1 else '' }})</span>
+    </h5>
+
+    {% for lc in lifecycles %}
+    <div class="lifecycle-card">
+        <div class="lifecycle-header d-flex justify-content-between align-items-center">
+            <div>
+                <span class="fw-bold fs-5">{{ lc.summary.symbol }}</span>
+                <span class="badge {% if lc.summary.side == 'long' %}bg-success{% else %}bg-danger{% endif %} ms-2">{{ lc.summary.side|upper }}</span>
+                <span class="badge {% if lc.summary.status == 'CLOSED' %}badge-closed{% elif lc.summary.status == 'OPEN' %}badge-open{% else %}bg-secondary{% endif %} ms-1">{{ lc.summary.status }}</span>
+
+                {% if lc.overall_status == 'error' %}
+                <span class="badge badge-status-error ms-2"><i class="fas fa-times-circle me-1"></i>Has Errors</span>
+                {% elif lc.overall_status == 'warning' %}
+                <span class="badge badge-status-warning ms-2"><i class="fas fa-exclamation-triangle me-1"></i>Has Warnings</span>
+                {% else %}
+                <span class="badge badge-status-ok ms-2"><i class="fas fa-check-circle me-1"></i>All OK</span>
+                {% endif %}
+            </div>
+            <div class="text-end small text-muted">
+                {% if lc.summary.get('opened_at') %}
+                {{ lc.summary.opened_at }}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="p-3">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <div class="small text-muted">Entry</div>
+                    <div class="monospace">{{ lc.summary.entry or '-' }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">Exit</div>
+                    <div class="monospace">{{ lc.summary.exit or '-' }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">P&L</div>
+                    <div class="monospace {% if lc.summary.pnl and '+' in lc.summary.pnl %}text-profit{% elif lc.summary.pnl and '-' in lc.summary.pnl %}text-loss{% endif %}">{{ lc.summary.pnl or '-' }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">Hold Time</div>
+                    <div class="monospace">{{ lc.summary.hold_time or '-' }}</div>
+                </div>
+            </div>
+
+            <h6 class="mb-2"><i class="fas fa-stream me-2"></i>Lifecycle</h6>
+            <div class="stage-timeline">
+                {% for stage in lc.stages %}
+                <div class="stage-item status-{{ stage.status }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="stage-name">
+                                {% if stage.status == 'ok' %}<i class="fas fa-check-circle text-success me-1"></i>
+                                {% elif stage.status == 'error' %}<i class="fas fa-times-circle text-danger me-1"></i>
+                                {% elif stage.status == 'warning' %}<i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                {% elif stage.status == 'pending' %}<i class="fas fa-clock text-muted me-1"></i>
+                                {% elif stage.status == 'skipped' %}<i class="fas fa-minus-circle text-muted me-1"></i>
+                                {% endif %}
+                                {{ stage.name }}
+                            </span>
+                        </div>
+                        <span class="stage-time">{{ stage.time or '' }}</span>
+                    </div>
+                    <div class="stage-msg {% if stage.status == 'error' %}text-danger{% elif stage.status == 'warning' %}text-warning{% elif stage.status == 'ok' %}text-success{% else %}text-muted{% endif %}">
+                        {{ stage.message }}
+                    </div>
+                    {% if stage.details %}
+                    <div class="stage-details">
+                        {% for d in stage.details %}
+                        <div>{{ d }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if stage.related_logs and stage.related_logs|length > 0 %}
+                    <div class="related-logs-section">
+                        <details open>
+                            <summary><i class="fas fa-file-alt me-1"></i>Related System Logs ({{ stage.related_logs|length }})</summary>
+                            <div class="mt-2">
+                                {% for log in stage.related_logs %}
+                                <div class="log-entry level-{{ log.level }}">
+                                    <div class="log-meta">
+                                        <span class="badge {% if log.level == 'ERROR' or log.level == 'CRITICAL' %}bg-danger{% else %}bg-warning text-dark{% endif %} me-1" style="font-size:0.65rem;">{{ log.level }}</span>
+                                        <span>{{ log.timestamp }}</span>
+                                        <span class="ms-2">[{{ log.source }}]</span>
+                                        {% if log.category %}<span class="ms-1 text-muted">({{ log.category }})</span>{% endif %}
+                                    </div>
+                                    <div class="log-msg">{{ log.message[:500] }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+{% elif lifecycles is not none and lifecycles|length == 0 %}
+    <div class="alert alert-secondary">
+        <i class="fas fa-search me-2"></i>
+        No results found for
+        {% if symbol %}<strong>{{ symbol }}</strong>{% endif %}
+        {% if order_id %}<strong>{{ order_id }}</strong>{% endif %}
+        {% if position_id %}<strong>Position #{{ position_id }}</strong>{% endif %}
+    </div>
+{% endif %}
+{% endif %}
+
+{% if not search_performed and recent_closed and recent_closed|length > 0 %}
+<hr class="my-3">
+<h5 class="mb-3">
+    <i class="fas fa-history me-2"></i>Recent Closed Positions
+    <span class="text-muted ms-2 small">({{ recent_closed|length }})</span>
+</h5>
+
+{% set ns = namespace(hist_errors=0, hist_warnings=0, hist_ok=0) %}
+{% for lc in recent_closed %}
+    {% if lc.overall_status == 'error' %}
+        {% set ns.hist_errors = ns.hist_errors + 1 %}
+    {% elif lc.overall_status == 'warning' %}
+        {% set ns.hist_warnings = ns.hist_warnings + 1 %}
+    {% else %}
+        {% set ns.hist_ok = ns.hist_ok + 1 %}
+    {% endif %}
+{% endfor %}
+
+<div class="row g-2 mb-3">
+    <div class="col-auto">
+        <span class="badge bg-danger px-3 py-2"><i class="fas fa-times-circle me-1"></i>{{ ns.hist_errors }} Errors</span>
+    </div>
+    <div class="col-auto">
+        <span class="badge bg-warning text-dark px-3 py-2"><i class="fas fa-exclamation-triangle me-1"></i>{{ ns.hist_warnings }} Warnings</span>
+    </div>
+    <div class="col-auto">
+        <span class="badge px-3 py-2" style="background-color: #00c087;"><i class="fas fa-check-circle me-1"></i>{{ ns.hist_ok }} OK</span>
+    </div>
+</div>
+
+{% for lc in recent_closed %}
+<div class="lifecycle-card">
+    <div class="lifecycle-header d-flex justify-content-between align-items-center">
+        <div>
+            <span class="fw-bold fs-5">{{ lc.summary.symbol }}</span>
+            <span class="badge {% if lc.summary.side == 'long' %}bg-success{% else %}bg-danger{% endif %} ms-2">{{ lc.summary.side|upper }}</span>
+            <span class="badge badge-closed ms-1">CLOSED</span>
+
+            {% if lc.overall_status == 'error' %}
+            <span class="badge badge-status-error ms-2"><i class="fas fa-times-circle me-1"></i>Has Errors</span>
+            {% elif lc.overall_status == 'warning' %}
+            <span class="badge badge-status-warning ms-2"><i class="fas fa-exclamation-triangle me-1"></i>Has Warnings</span>
+            {% else %}
+            <span class="badge badge-status-ok ms-2"><i class="fas fa-check-circle me-1"></i>All OK</span>
+            {% endif %}
+        </div>
+        <div class="text-end small text-muted">
+            {% if lc.summary.get('opened_at') %}
+            {{ lc.summary.opened_at }}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="p-3">
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="small text-muted">Entry</div>
+                <div class="monospace">{{ lc.summary.entry or '-' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Exit</div>
+                <div class="monospace">{{ lc.summary.exit or '-' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">P&L</div>
+                <div class="monospace {% if lc.summary.pnl and '+' in lc.summary.pnl %}text-profit{% elif lc.summary.pnl and '-' in lc.summary.pnl %}text-loss{% endif %}">{{ lc.summary.pnl or '-' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Hold Time</div>
+                <div class="monospace">{{ lc.summary.hold_time or '-' }}</div>
+            </div>
+        </div>
+
+        <details>
+            <summary class="mb-2" style="cursor:pointer;"><i class="fas fa-stream me-2"></i>Lifecycle Details</summary>
+            <div class="stage-timeline mt-2">
+                {% for stage in lc.stages %}
+                <div class="stage-item status-{{ stage.status }}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="stage-name">
+                                {% if stage.status == 'ok' %}<i class="fas fa-check-circle text-success me-1"></i>
+                                {% elif stage.status == 'error' %}<i class="fas fa-times-circle text-danger me-1"></i>
+                                {% elif stage.status == 'warning' %}<i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                {% elif stage.status == 'pending' %}<i class="fas fa-clock text-muted me-1"></i>
+                                {% elif stage.status == 'skipped' %}<i class="fas fa-minus-circle text-muted me-1"></i>
+                                {% endif %}
+                                {{ stage.name }}
+                            </span>
+                        </div>
+                        <span class="stage-time">{{ stage.time or '' }}</span>
+                    </div>
+                    <div class="stage-msg {% if stage.status == 'error' %}text-danger{% elif stage.status == 'warning' %}text-warning{% elif stage.status == 'ok' %}text-success{% else %}text-muted{% endif %}">
+                        {{ stage.message }}
+                    </div>
+                    {% if stage.details %}
+                    <div class="stage-details">
+                        {% for d in stage.details %}
+                        <div>{{ d }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if stage.related_logs and stage.related_logs|length > 0 %}
+                    <div class="related-logs-section">
+                        <details>
+                            <summary><i class="fas fa-file-alt me-1"></i>Related System Logs ({{ stage.related_logs|length }})</summary>
+                            <div class="mt-2">
+                                {% for log in stage.related_logs %}
+                                <div class="log-entry level-{{ log.level }}">
+                                    <div class="log-meta">
+                                        <span class="badge {% if log.level == 'ERROR' or log.level == 'CRITICAL' %}bg-danger{% else %}bg-warning text-dark{% endif %} me-1" style="font-size:0.65rem;">{{ log.level }}</span>
+                                        <span>{{ log.timestamp }}</span>
+                                        <span class="ms-2">[{{ log.source }}]</span>
+                                        {% if log.category %}<span class="ms-1 text-muted">({{ log.category }})</span>{% endif %}
+                                    </div>
+                                    <div class="log-msg">{{ log.message[:500] }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}

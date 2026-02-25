@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}System Logs - Trading System{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="fas fa-scroll me-2"></i>System Logs</h4>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-secondary" id="totalCount">Total: {{ total_count }}</span>
+            <a href="{{ url_for('admin_logs', level='ERROR') if request.args.get('level') != 'ERROR' else url_for('admin_logs') }}" 
+               class="btn btn-sm {{ 'btn-danger' if request.args.get('level') == 'ERROR' else 'btn-outline-danger' }}">
+                <i class="fas fa-exclamation-circle me-1"></i>Errors
+            </a>
+            <button class="btn btn-sm btn-outline-success" id="btnLive" onclick="toggleLive()">
+                <i class="fas fa-satellite-dish me-1"></i><span id="liveLabel">Live</span>
+            </button>
+            <span id="liveIndicator" class="d-none">
+                <span class="badge bg-success"><i class="fas fa-circle me-1" style="font-size:0.5rem;animation:pulse 1.5s infinite;"></i>Live</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <form method="GET" action="{{ url_for('admin_logs') }}" class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Level</label>
+                    <select name="level" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="ERROR" {{ 'selected' if request.args.get('level') == 'ERROR' }}>ERROR</option>
+                        <option value="WARNING" {{ 'selected' if request.args.get('level') == 'WARNING' }}>WARNING</option>
+                        <option value="INFO" {{ 'selected' if request.args.get('level') == 'INFO' }}>INFO</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Category</label>
+                    <select name="category" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="order" {{ 'selected' if request.args.get('category') == 'order' }}>Order</option>
+                        <option value="trailing_stop" {{ 'selected' if request.args.get('category') == 'trailing_stop' }}>Trailing Stop</option>
+                        <option value="position" {{ 'selected' if request.args.get('category') == 'position' }}>Position</option>
+                        <option value="signal" {{ 'selected' if request.args.get('category') == 'signal' }}>Signal</option>
+                        <option value="sync" {{ 'selected' if request.args.get('category') == 'sync' }}>Sync</option>
+                        <option value="error" {{ 'selected' if request.args.get('category') == 'error' }}>Error</option>
+                        <option value="websocket" {{ 'selected' if request.args.get('category') == 'websocket' }}>WebSocket</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Symbol</label>
+                    <input type="text" name="symbol" class="form-control form-control-sm" 
+                           placeholder="e.g. AMDG" value="{{ request.args.get('symbol', '') }}" style="width: 100px;">
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Source</label>
+                    <select name="source" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for src in sources %}
+                        <option value="{{ src }}" {{ 'selected' if request.args.get('source') == src }}>{{ src }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0 small">Search</label>
+                    <input type="text" name="search" class="form-control form-control-sm" 
+                           placeholder="keyword..." value="{{ request.args.get('search', '') }}" style="width: 150px;">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-search me-1"></i>Filter</button>
+                    <a href="{{ url_for('admin_logs') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0" id="logsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 160px;">Time</th>
+                        <th style="width: 70px;">Level</th>
+                        <th style="width: 100px;">Category</th>
+                        <th style="width: 80px;">Symbol</th>
+                        <th style="width: 140px;">Source</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody id="logsBody">
+                    {% for log in logs %}
+                    <tr data-log-id="{{ log.id }}" class="{{ 'table-danger' if log.level == 'ERROR' else ('table-warning' if log.level == 'WARNING' else '') }}">
+                        <td class="text-nowrap small">{{ log.timestamp.strftime('%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            {% if log.level == 'ERROR' %}
+                            <span class="badge bg-danger">ERROR</span>
+                            {% elif log.level == 'WARNING' %}
+                            <span class="badge bg-warning text-dark">WARN</span>
+                            {% else %}
+                            <span class="badge bg-info text-dark">INFO</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-secondary">{{ log.category or '-' }}</span></td>
+                        <td class="fw-bold">{{ log.symbol or '' }}</td>
+                        <td class="small text-muted">{{ log.source or '' }}</td>
+                        <td class="small" style="max-width: 600px; word-break: break-word;">{{ log.message }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if not logs %}
+                    <tr id="emptyRow">
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox me-2"></i>No logs found. Logs will appear as the system processes events.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if total_pages > 1 %}
+    <nav class="mt-3" id="paginationNav">
+        <ul class="pagination pagination-sm justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_logs', page=page-1, **filter_args) }}">Prev</a>
+            </li>
+            {% endif %}
+            
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                {% elif p <= 3 or p > total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('admin_logs', page=p, **filter_args) }}">{{ p }}</a>
+                </li>
+                {% elif p == 4 or p == total_pages - 2 %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_logs', page=page+1, **filter_args) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+@keyframes newRowFlash {
+    0% { background-color: rgba(25, 135, 84, 0.3); }
+    100% { background-color: transparent; }
+}
+tr.new-log-row {
+    animation: newRowFlash 2s ease-out;
+}
+tr.new-log-row.table-danger {
+    animation: none;
+}
+tr.new-log-row.table-warning {
+    animation: none;
+}
+</style>
+
+<script>
+(function() {
+    var isLive = false;
+    var pollTimer = null;
+    var maxId = 0;
+    var page = {{ page }};
+    var filterArgs = {{ filter_args | tojson }};
+
+    var rows = document.querySelectorAll('#logsBody tr[data-log-id]');
+    rows.forEach(function(r) {
+        var id = parseInt(r.getAttribute('data-log-id'));
+        if (id > maxId) maxId = id;
+    });
+
+    function buildLevelBadge(level) {
+        if (level === 'ERROR') return '<span class="badge bg-danger">ERROR</span>';
+        if (level === 'WARNING') return '<span class="badge bg-warning text-dark">WARN</span>';
+        return '<span class="badge bg-info text-dark">INFO</span>';
+    }
+
+    function rowClass(level) {
+        if (level === 'ERROR') return 'table-danger';
+        if (level === 'WARNING') return 'table-warning';
+        return '';
+    }
+
+    function escapeHtml(text) {
+        var d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    function pollLogs() {
+        var url = '/admin/logs/poll?after_id=' + maxId;
+        for (var k in filterArgs) {
+            url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(filterArgs[k]);
+        }
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!isLive) return;
+                document.getElementById('totalCount').textContent = 'Total: ' + data.total_count;
+
+                if (data.logs.length > 0 && page === 1) {
+                    var empty = document.getElementById('emptyRow');
+                    if (empty) empty.remove();
+
+                    var tbody = document.getElementById('logsBody');
+                    for (var i = data.logs.length - 1; i >= 0; i--) {
+                        var log = data.logs[i];
+                        if (log.id > maxId) maxId = log.id;
+                        var tr = document.createElement('tr');
+                        tr.setAttribute('data-log-id', log.id);
+                        var rc = rowClass(log.level);
+                        if (rc) tr.className = rc + ' new-log-row';
+                        else tr.className = 'new-log-row';
+                        tr.innerHTML = 
+                            '<td class="text-nowrap small">' + escapeHtml(log.timestamp) + '</td>' +
+                            '<td>' + buildLevelBadge(log.level) + '</td>' +
+                            '<td><span class="badge bg-secondary">' + escapeHtml(log.category) + '</span></td>' +
+                            '<td class="fw-bold">' + escapeHtml(log.symbol) + '</td>' +
+                            '<td class="small text-muted">' + escapeHtml(log.source) + '</td>' +
+                            '<td class="small" style="max-width:600px;word-break:break-word;">' + escapeHtml(log.message) + '</td>';
+                        tbody.insertBefore(tr, tbody.firstChild);
+                    }
+
+                    while (tbody.children.length > 200) {
+                        tbody.removeChild(tbody.lastChild);
+                    }
+                }
+            })
+            .catch(function(err) {
+                console.error('Poll error:', err);
+            });
+    }
+
+    window.toggleLive = function() {
+        isLive = !isLive;
+        var btn = document.getElementById('btnLive');
+        var label = document.getElementById('liveLabel');
+        var indicator = document.getElementById('liveIndicator');
+        if (isLive) {
+            btn.className = 'btn btn-sm btn-success';
+            label.textContent = 'Live ON';
+            indicator.classList.remove('d-none');
+            pollLogs();
+            pollTimer = setInterval(pollLogs, 3000);
+        } else {
+            btn.className = 'btn btn-sm btn-outline-success';
+            label.textContent = 'Live';
+            indicator.classList.add('d-none');
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+    };
+
+    if (page === 1) {
+        window.toggleLive();
+    }
+})();
+</script>
+{% endblock %}

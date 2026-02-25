@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Signal Logs - Trading System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">
+        <i class="fas fa-satellite-dish me-2"></i>
+        Webhook Signal Logs
+    </h1>
+    <div class="d-flex align-items-center gap-3">
+        <form method="GET" action="{{ url_for('signal_logs') }}" class="d-flex align-items-center gap-2">
+            {% if endpoint_filter %}
+            <input type="hidden" name="ep" value="{{ endpoint_filter }}">
+            {% endif %}
+            <div class="input-group input-group-sm" style="width: 160px;">
+                <input type="text" name="symbol" class="form-control" placeholder="Symbol..." 
+                       value="{{ symbol_filter or '' }}" style="text-transform: uppercase;">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+            <select name="status" class="form-select form-select-sm" style="width: 110px;" onchange="this.form.submit()">
+                <option value="">All Status</option>
+                <option value="success" {% if status_filter == 'success' %}selected{% endif %}>Success</option>
+                <option value="error" {% if status_filter == 'error' %}selected{% endif %}>Error</option>
+                <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+            </select>
+            {% if symbol_filter or status_filter %}
+            <a href="{{ url_for('signal_logs', ep=endpoint_filter) if endpoint_filter else url_for('signal_logs') }}" 
+               class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+        <div class="btn-group">
+            <a href="{{ url_for('signal_logs', symbol=symbol_filter) if symbol_filter else url_for('signal_logs') }}" class="btn btn-outline-primary {% if not endpoint_filter %}active{% endif %}">
+                All
+            </a>
+            <a href="{{ url_for('signal_logs', ep='webhook', symbol=symbol_filter) if symbol_filter else url_for('signal_logs', ep='webhook') }}" class="btn btn-outline-success {% if endpoint_filter == 'webhook' %}active{% endif %}">
+                Real
+            </a>
+            <a href="{{ url_for('signal_logs', ep='webhook_paper', symbol=symbol_filter) if symbol_filter else url_for('signal_logs', ep='webhook_paper') }}" class="btn btn-outline-warning {% if endpoint_filter == 'webhook_paper' %}active{% endif %}">
+                Paper
+            </a>
+            <a href="{{ url_for('signal_logs', ep='webhook_both', symbol=symbol_filter) if symbol_filter else url_for('signal_logs', ep='webhook_both') }}" class="btn btn-outline-info {% if endpoint_filter == 'webhook_both' %}active{% endif %}">
+                Both
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <span>Recent Signals ({{ signals|length }} records)</span>
+            <span class="text-muted small">Auto-refreshes every 30 seconds</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if signals %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 140px;">Time</th>
+                        <th style="width: 80px;">Symbol</th>
+                        <th style="width: 100px;">Endpoint</th>
+                        <th style="width: 80px;">Account</th>
+                        <th>Signal</th>
+                        <th style="width: 90px;">API Status</th>
+                        <th style="width: 100px;">Order Status</th>
+                        <th style="width: 160px;">Order ID</th>
+                        <th style="width: 60px;">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in signals %}
+                    <tr>
+                        <td class="text-nowrap small">
+                            {{ log.created_at.strftime('%m/%d %H:%M:%S') if log.created_at else 'N/A' }}
+                        </td>
+                        <td>
+                            {% if log.symbol %}
+                            <strong class="text-primary">{{ log.symbol }}</strong>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.endpoint == '/webhook' %}
+                            <span class="badge bg-success">Real</span>
+                            {% elif log.endpoint == '/webhook_paper' %}
+                            <span class="badge bg-warning text-dark">Paper</span>
+                            {% elif log.endpoint == '/webhook_both' %}
+                            <span class="badge bg-info">Both</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ log.endpoint or 'Unknown' }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">{{ log.account_type or '-' }}</td>
+                        <td class="small">
+                            <code class="text-break" style="max-width: 300px; display: inline-block;">
+                                {{ log.raw_signal[:100] }}{% if log.raw_signal|length > 100 %}...{% endif %}
+                            </code>
+                        </td>
+                        <td>
+                            {% if log.tiger_status == 'success' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check me-1"></i>Success
+                            </span>
+                            {% elif log.tiger_status == 'partial' %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-exclamation me-1"></i>Partial
+                            </span>
+                            {% elif log.tiger_status == 'error' %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-times me-1"></i>Error
+                            </span>
+                            {% elif log.parsed_successfully %}
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-clock me-1"></i>Parsed
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-times me-1"></i>Parse Fail
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.trade %}
+                                {% if log.trade.status.value == 'filled' %}
+                                <span class="badge bg-success">FILLED</span>
+                                {% elif log.trade.status.value == 'pending' %}
+                                <span class="badge bg-warning text-dark">PENDING</span>
+                                {% elif log.trade.status.value == 'cancelled' %}
+                                <span class="badge bg-secondary">CANCELLED</span>
+                                {% elif log.trade.status.value == 'rejected' %}
+                                <span class="badge bg-danger">REJECTED</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ log.trade.status.value|upper }}</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if log.tiger_order_id %}
+                            <code>{{ log.tiger_order_id[:20] }}{% if log.tiger_order_id|length > 20 %}...{% endif %}</code>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-secondary" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#detailModal{{ log.id }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No signals received yet</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% for log in signals %}
+<div class="modal fade" id="detailModal{{ log.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Signal #{{ log.id }} Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Time:</strong><br>
+                        {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') if log.created_at else 'N/A' }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Endpoint:</strong><br>
+                        {{ log.endpoint or 'Unknown' }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>IP Address:</strong><br>
+                        {{ log.ip_address or 'Unknown' }}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Raw Signal:</strong>
+                    <pre class="bg-dark p-3 rounded mt-1" style="max-height: 200px; overflow-y: auto;"><code>{{ log.raw_signal }}</code></pre>
+                </div>
+                
+                {% if log.error_message %}
+                <div class="mb-3">
+                    <strong class="text-danger">Error:</strong>
+                    <pre class="bg-danger bg-opacity-10 p-3 rounded mt-1 text-danger">{{ log.error_message }}</pre>
+                </div>
+                {% endif %}
+                
+                {% if log.tiger_response %}
+                <div class="mb-3">
+                    <strong>Tiger API Response:</strong>
+                    <pre class="bg-dark p-3 rounded mt-1" style="max-height: 300px; overflow-y: auto;"><code>{{ log.tiger_response }}</code></pre>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Tiger Status:</strong><br>
+                        {% if log.tiger_status == 'success' %}
+                        <span class="badge bg-success">Success</span>
+                        {% elif log.tiger_status == 'partial' %}
+                        <span class="badge bg-warning text-dark">Partial</span>
+                        {% elif log.tiger_status == 'error' %}
+                        <span class="badge bg-danger">Error</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ log.tiger_status or 'N/A' }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Order ID:</strong><br>
+                        <code>{{ log.tiger_order_id or 'N/A' }}</code>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Trade ID:</strong><br>
+                        {% if log.trade_id %}
+                        <a href="{{ url_for('trades') }}">{{ log.trade_id }}</a>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+setTimeout(function() {
+    location.reload();
+}, 30000);
+</script>
+{% endblock %}

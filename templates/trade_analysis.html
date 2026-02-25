@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Trade Analysis - AI Trading Intelligence{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-brain me-3"></i>Trade Analysis
+        </h1>
+        <p class="lead">AI-powered trade matching & signal quality analysis (AI交易分析)</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-play me-2"></i>Run Analysis</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('trade_analysis_run') }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Target Date</label>
+                            <input type="date" name="target_date" class="form-control" value="{{ today }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Brokers</label>
+                            <select name="brokers" class="form-select">
+                                <option value="tiger,alpaca">Both (Tiger + Alpaca)</option>
+                                <option value="tiger">Tiger Only</option>
+                                <option value="alpaca">Alpaca Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-3">
+                                <input class="form-check-input" type="checkbox" name="skip_ai" id="skipAi">
+                                <label class="form-check-label" for="skipAi">
+                                    Skip AI Analysis (rule-based only)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary mt-2">
+                                <i class="fas fa-rocket me-1"></i>Run Analysis
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>System Info</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Data Sources:</strong></p>
+                <ul class="list-unstyled ms-3">
+                    <li><i class="fas fa-database me-1 text-info"></i> SignalLog / OrderTracker / ClosedPosition</li>
+                    <li><i class="fas fa-exchange-alt me-1 text-warning"></i> Tiger & Alpaca Broker APIs</li>
+                    <li><i class="fas fa-robot me-1 text-success"></i> Claude AI for fuzzy matching & insights</li>
+                </ul>
+                <p class="text-muted small mb-0">
+                    Three-layer matching: Exact ID → Fuzzy (symbol+time+qty) → AI Analysis
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Analysis Reports</h5>
+                <span class="badge bg-secondary">{{ reports|length }} reports</span>
+            </div>
+            <div class="card-body p-0">
+                {% if reports %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Health</th>
+                                <th>Trades</th>
+                                <th>P&L</th>
+                                <th>Anomalies</th>
+                                <th>Unmatched</th>
+                                <th>Generated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reports %}
+                            <tr>
+                                <td><strong>{{ r.report_date }}</strong></td>
+                                <td>
+                                    {% if r.health_score >= 90 %}
+                                    <span class="badge bg-success">{{ r.health_score }}/100</span>
+                                    {% elif r.health_score >= 70 %}
+                                    <span class="badge bg-warning text-dark">{{ r.health_score }}/100</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">{{ r.health_score }}/100</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ r.total_trades }}</td>
+                                <td>
+                                    {% if r.total_pnl and r.total_pnl >= 0 %}
+                                    <span class="text-success">${{ "%.2f"|format(r.total_pnl) }}</span>
+                                    {% elif r.total_pnl %}
+                                    <span class="text-danger">${{ "%.2f"|format(r.total_pnl) }}</span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set anomalies = r.summary_data.get('total_anomalies', 0) if r.summary_data else 0 %}
+                                    {% if anomalies > 0 %}
+                                    <span class="badge bg-warning text-dark">{{ anomalies }}</span>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set unmatched = r.summary_data.get('total_unmatched', 0) if r.summary_data else 0 %}
+                                    {% if unmatched > 0 %}
+                                    <span class="badge bg-info">{{ unmatched }}</span>
+                                    {% else %}
+                                    <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted small">{{ r.created_at.strftime('%H:%M') if r.created_at else '-' }}</td>
+                                <td>
+                                    <a href="{{ url_for('trade_analysis_report', report_date=r.report_date) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No analysis reports yet. Run your first analysis above.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

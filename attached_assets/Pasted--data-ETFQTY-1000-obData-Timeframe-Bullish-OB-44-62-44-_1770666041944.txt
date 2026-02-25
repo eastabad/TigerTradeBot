@@ -1,0 +1,108 @@
+{
+  "data": {
+    "ETFQTY": "1000",
+    "obData": "Timeframe: ; Bullish OB: 44.62 - 44.62; Bearish OB: 44.62 - 44.62",
+    "symbol": "IREN",
+    "MAtrend": "1",
+    "pmaText": "PMA Bullish",
+    "POCtrend": "1",
+    "adxValue": "28.6340108512",
+    "CVDsignal": "cvdAboveMA",
+    "SQZsignal": "no squeeze",
+    "MOMOsignal": "bullishmomo",
+    "choppiness": "39.73352854",
+    "RSIHAsignal": "BullishHA",
+    "poc_summary": "Daily POC: 43.00; Prev DailyPOC: 41.64; Weekly POC: 43.00; Prev Weekly POC: 41.00; Monthly POC: 42.00; Prev Monthly POC: 53.00",
+    "AIbandsignal": "green uptrend",
+    "center_trend": "Strong Bullish",
+    "ratingstatus": "Bullish-Strong-OscDriven",
+    "HTFwave_signal": "Neutral",
+    "TrendTracerHTF": "1",
+    "ewotrend_state": "Strong Bullish",
+    "lastDemandText": "40.04 - 39.2 | 15m",
+    "lastSupplyText": "43.29 - 42.4 | 15m",
+    "FormattedScores": "S:1 / L:1",
+    "rsi_state_trend": "Bullish",
+    "wavemarket_state": "Long Strong",
+    "Current_timeframe": "15",
+    "TrendTracersignal": "1",
+    "MAtrend_timeframe1": "0",
+    "MAtrend_timeframe2": "-1",
+    "Middle_smooth_trend": "Bullish +",
+    "adaptive_timeframe_1": "60",
+    "adaptive_timeframe_2": "240",
+    "choppingrange_signal": "no chopping",
+    "trend_change_volatility_stop": "37.63"
+  },
+  "action": "buy",
+  "extras": {
+    "etf": {
+      "ticker": "",
+      "stopLoss": null,
+      "entryPrice": null,
+      "takeProfit": null
+    },
+    "risk": 1,
+    "indicator": "📌WaveMatrix longStrongSignal\nSignal: A++4, WMvalue: 33.19, 趋势强度: 100%\n动能一致性: 强一致 (4/4)\nMomo State: 共振多头 (2+2)\nHTF: B+0,strongpass, WMvalue: 6.32, 趋势强度: 52.9%\nHTF动能一致性: 强一致 (4/4)\nHTF Momo State: 中性/冲突 (2+-2) | 60\nMarket Structure: V5 (DDUU)\n🟢 OB: pass(+0.5) - 做多信号在1H+4H支撑上方运行｜支撑:4H支撑上方37.96%,1H支撑上方10.07%｜阻力:距4H阻力39.1%,距1H阻力20.22%\nDeviation: 58.1% → 仓位x0.6\nMarketRegime: NESTED_BULL\nSqueeze: ✅趋势共振 pass, HTF[非挤压,有pass]+Cur[非挤压,有pass]\nPPO: 2(强共振(双周期发散))/-0.5(混沌区(短期反向)) → WARN x0.8 [PPO-CUR-STRONG-HTF-OPP]\n多维综合评级: A++4 M+4 V5\nFinal Decision: STRONGPASS - 6维度strongpass但V评级V5，降级为pass+警告\nHTF⚠️方向不一致",
+    "oscrating": 100,
+    "timeframe": "15m",
+    "trendrating": 80,
+    "referencePrice": 44.615
+  },
+  "ticker": "IREN",
+  "quantity": "345",
+  "stopLoss": {
+    "stopPrice": 42.05
+  },
+  "takeProfit": {
+    "limitPrice": 51
+  },
+  "filter_result": {
+    "decision": "strongpass",
+    "rating": "A++4",
+    "final_rating": "📌WaveMatrix longStrongSignal\nSignal: A++4, WMvalue: 33.19, 趋势强度: 100%\n动能一致性: 强一致 (4/4)\nMomo State: 共振多头 (2+2)\nHTF: B+0,strongpass, WMvalue: 6.32, 趋势强度: 52.9%\nHTF动能一致性: 强一致 (4/4)\nHTF Momo State: 中性/冲突 (2+-2) | 60\nMarket Structure: V5 (DDUU)\n🟢 OB: pass(+0.5) - 做多信号在1H+4H支撑上方运行｜支撑:4H支撑上方37.96%,1H支撑上方10.07%｜阻力:距4H阻力39.1%,距1H阻力20.22%\nDeviation: 58.1% → 仓位x0.6\nMarketRegime: NESTED_BULL\nSqueeze: ✅趋势共振 pass, HTF[非挤压,有pass]+Cur[非挤压,有pass]\nPPO: 2(强共振(双周期发散))/-0.5(混沌区(短期反向)) → WARN x0.8 [PPO-CUR-STRONG-HTF-OPP]\n多维综合评级: A++4 M+4 V5\nFinal Decision: STRONGPASS - 6维度strongpass但V评级V5，降级为pass+警告\nHTF⚠️方向不一致",
+    "reason": "阶段1: A++4级 (总分0.6, WMvalue: 33.19) | 阶段2: HTF规则strongpass | 阶段3(6维度): 高质量信号：当前A级强势+HTFB+0支持+HTF规则strongpass | 阶段4(V评级): 6维度strongpass但V评级V5，降级为pass+警告 | 阶段5(OB): 做多信号在1H+4H支撑上方运行｜支撑:4H支撑上方37.96%,1H支撑上方10.07%｜阻力:距4H阻力39.1%,距1H阻力20.22% | POC空间: 18.5% | 乖离率: 58.1%(x1.45)→仓位x0.6 | 阶段6(MRC): [MRC强] NESTED_BULL+A++4级+HTF通过，强势做多",
+    "scores": {
+      "main_trend_raw": 0,
+      "main_trend_normalized": 0,
+      "main_trend_weighted": 0,
+      "wave_raw": 5,
+      "wave_components": {
+        "wavematrixtrend": 2,
+        "momentum_state": 2,
+        "tsimastatus": 1,
+        "tsiha": 1,
+        "rsiha": 1,
+        "calculated": 7.4,
+        "limited": 5
+      },
+      "momo_indicators": {
+        "momo_swing_state": 2,
+        "momo_longswing_state": 2,
+        "momo_composite_score": 4
+      },
+      "wave_normalized": 1,
+      "wave_weighted": 0.5,
+      "structural_raw": 2,
+      "structural_normalized": 1,
+      "structural_weighted": 0.1,
+      "total_score": 0.6,
+      "momentum_check": {
+        "passed": true,
+        "aligned_count": 4,
+        "details": "4/4个指标看涨: TSIHA, TSIMASTATUS, RSIHA, Wavematrixtrend",
+        "wavematrix_status": "强一致",
+        "wavematrix_value": 2
+      },
+      "tsi_check": {
+        "passed": true,
+        "threshold": 40,
+        "details": "TSI=33.19 < 40.0 (避免超买)"
+      },
+      "tsi_value": 33.19118302011266
+    },
+    "htf_mismatch": true
+  },
+  "signal_type": "filtered",
+  "forwarded_at": "2026-02-09T16:16:32.805169"
+}

@@ -1,0 +1,174 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Positions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-layer-group me-2"></i>Positions</h4>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card neutral">
+            <div class="card-body py-2">
+                <div class="text-muted small">Open</div>
+                <div class="fs-4 fw-bold monospace">{{ open_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body py-2">
+                <div class="text-muted small">Closed</div>
+                <div class="fs-4 fw-bold monospace">{{ closed_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if total_unrealized >= 0 %}profit{% else %}loss{% endif %}">
+            <div class="card-body py-2">
+                <div class="text-muted small">Unrealized P&L</div>
+                <div class="fs-4 fw-bold monospace {% if total_unrealized >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                    ${{ "%.2f"|format(total_unrealized) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card {% if total_realized >= 0 %}profit{% else %}loss{% endif %}">
+            <div class="card-body py-2">
+                <div class="text-muted small">Realized P&L</div>
+                <div class="fs-4 fw-bold monospace {% if total_realized >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                    ${{ "%.2f"|format(total_realized) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-auto">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+                    <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                    <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <input type="text" name="symbol" class="form-control form-control-sm" 
+                       placeholder="Symbol" value="{{ symbol_filter }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                <a href="{{ url_for('alpaca.alpaca_positions') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if positions.items %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Position Key</th>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Entry Qty</th>
+                        <th>Avg Entry</th>
+                        <th>Status</th>
+                        <th>P&L</th>
+                        <th>Opened</th>
+                        <th>Closed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pos in positions.items %}
+                    <tr onclick="window.location='{{ url_for('alpaca.alpaca_position_detail', position_id=pos.id) }}'" style="cursor:pointer">
+                        <td class="monospace small">{{ pos.position_key }}</td>
+                        <td class="fw-bold">{{ pos.symbol }}</td>
+                        <td>
+                            <span class="badge {% if pos.side == 'long' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ pos.side|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace">{{ pos.total_entry_quantity }}</td>
+                        <td class="monospace">
+                            {% if pos.avg_entry_price %}${{ "%.2f"|format(pos.avg_entry_price) }}{% else %}-{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if pos.status.value == 'open' %}badge-open{% else %}badge-closed{% endif %}">
+                                {{ pos.status.value|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace">
+                            {% if pos.status.value == 'open' and pos.symbol in holdings_map %}
+                                {% set h = holdings_map[pos.symbol] %}
+                                <span class="{% if (h.unrealized_pnl or 0) >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                                    ${{ "%.2f"|format(h.unrealized_pnl or 0) }}
+                                </span>
+                                {% if h.unrealized_pnl_pct is defined and h.unrealized_pnl_pct is not none %}
+                                    <small class="text-muted">({{ "%.1f"|format(h.unrealized_pnl_pct) }}%)</small>
+                                {% endif %}
+                            {% elif pos.realized_pnl is not none %}
+                                <span class="{% if pos.realized_pnl >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                                    ${{ "%.2f"|format(pos.realized_pnl) }}
+                                </span>
+                                {% if pos.pnl_percent is not none %}
+                                    <small class="text-muted">({{ "%.1f"|format(pos.pnl_percent) }}%)</small>
+                                {% endif %}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="monospace text-muted small">
+                            {{ pos.opened_at.strftime('%m/%d %H:%M') if pos.opened_at else '-' }}
+                        </td>
+                        <td class="monospace text-muted small">
+                            {{ pos.closed_at.strftime('%m/%d %H:%M') if pos.closed_at else '-' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if positions.pages > 1 %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if positions.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_positions', page=positions.prev_num, status=status_filter, symbol=symbol_filter) }}">Prev</a>
+                    </li>
+                    {% endif %}
+                    {% for p in positions.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}
+                        <li class="page-item {% if p == positions.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('alpaca.alpaca_positions', page=p, status=status_filter, symbol=symbol_filter) }}">{{ p }}</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if positions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('alpaca.alpaca_positions', page=positions.next_num, status=status_filter, symbol=symbol_filter) }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No positions found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Signal #{{ signal.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="fas fa-satellite-dish me-2"></i>Signal #{{ signal.id }}
+        <span class="badge ms-2
+            {% if signal.status == 'executed' %}bg-success
+            {% elif signal.status == 'error' %}bg-danger
+            {% elif signal.status == 'parsed' %}bg-info
+            {% else %}bg-secondary{% endif %}">
+            {{ signal.status|upper }}
+        </span>
+    </h4>
+    <a href="{{ url_for('alpaca.alpaca_signals') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Signals
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Signal Info</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:35%">ID</td>
+                        <td class="monospace">{{ signal.id }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Time</td>
+                        <td class="monospace">{{ signal.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Source</td>
+                        <td>{{ signal.source or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Symbol</td>
+                        <td class="fw-bold">{{ signal.symbol or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Action</td>
+                        <td>
+                            {% if signal.action %}
+                            <span class="badge {% if signal.action == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ signal.action|upper }}
+                            </span>
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Status</td>
+                        <td>
+                            <span class="badge 
+                                {% if signal.status == 'executed' %}bg-success
+                                {% elif signal.status == 'error' %}bg-danger
+                                {% elif signal.status == 'parsed' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ signal.status|upper }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% if signal.trade_id %}
+                    <tr>
+                        <td class="text-muted">Trade ID</td>
+                        <td class="monospace">{{ signal.trade_id }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if signal.error_message %}
+                    <tr>
+                        <td class="text-muted">Error</td>
+                        <td class="text-danger small">{{ signal.error_message }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if trade %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Linked Trade</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:35%">Trade ID</td>
+                        <td class="monospace">{{ trade.id }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Order ID</td>
+                        <td class="monospace small">{{ trade.alpaca_order_id or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Symbol</td>
+                        <td class="fw-bold">{{ trade.symbol }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Side</td>
+                        <td>
+                            <span class="badge {% if trade.side.value == 'buy' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ trade.side.value|upper }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Quantity</td>
+                        <td class="monospace">{{ trade.quantity }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Price</td>
+                        <td class="monospace">
+                            {% if trade.filled_price %}
+                                ${{ "%.2f"|format(trade.filled_price) }} (filled)
+                            {% elif trade.price %}
+                                ${{ "%.2f"|format(trade.price) }} (limit)
+                            {% else %}MKT{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Status</td>
+                        <td>
+                            <span class="badge badge-{{ trade.status.value }}">{{ trade.status.value|upper }}</span>
+                        </td>
+                    </tr>
+                    {% if trade.stop_loss_price %}
+                    <tr>
+                        <td class="text-muted">Stop Loss</td>
+                        <td class="monospace text-loss">${{ "%.2f"|format(trade.stop_loss_price) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if trade.take_profit_price %}
+                    <tr>
+                        <td class="text-muted">Take Profit</td>
+                        <td class="monospace text-profit">${{ "%.2f"|format(trade.take_profit_price) }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if parsed %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-code me-2"></i>Parsed Signal Data</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                {% for key, value in parsed.items() %}
+                <tr>
+                    <td class="text-muted" style="width:30%">{{ key }}</td>
+                    <td class="monospace">{{ value }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if raw_formatted %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-file-code me-2"></i>Raw Signal Data</h6>
+    </div>
+    <div class="card-body">
+        <pre class="mb-0" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 0.375rem;">{{ raw_formatted }}</pre>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

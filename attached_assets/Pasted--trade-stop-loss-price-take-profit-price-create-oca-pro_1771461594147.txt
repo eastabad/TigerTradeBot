@@ -1,0 +1,93 @@
+• 然后 只有在 trade.stop_loss_price 或 take_profit_price 有值时，才会调用 create_oca_protection(...) 去真正下 OCA 订单。
+
+如果这四个条件中任何一个不满足，这次即时 OCA 就根本不会尝试（连 “OCA protection created...” / “OCA creation failed...” 这类日志都不会出现）。
+
+───
+
+2. 用 TEM 这单对一下实际数据
+
+数据库里现在 TEM 的 Trade 记录是这样的：
+
+SELECT id,symbol,price,stop_loss_price,take_profit_price,
+       needs_auto_protection,protection_info
+FROM trade
+ORDER BY id DESC LIMIT 1;结果（简化）：
+
+id                  = 7
+symbol              = TEM
+price               = 56.73
+stop_loss_price     = 53.87
+take_profit_price   = 62.12
+needs_auto_protection = false
+protection_info       = NULLTrailingStopPosition 也已经有了这笔 TS：
+
+SELECT id,symbol,account_type,entry_price,
+       signal_stop_loss,fixed_stop_loss,fixed_take_profit,current_trailing_stop
+FROM trailing_stop_position
+WHERE symbol='TEM';结果：
+
+id                  = 3
+symbol              = TEM
+account_type        = real
+entry_price         = 56.73
+signal_stop_loss    = 53.87
+fixed_stop_loss     = 53.87
+fixed_take_profit   = 62.12
+current_trailing_stop = 53.87这说明两件事：
+
+• ts_config.is_enabled 当时是开的（否则不会跑 create_trailing_stop_for_trade 这一段，也不会有这条 TS）。
+• trade.stop_loss_price / take_profit_price 当时确实有值，并且成功传入 TS。
+
+但是：
+在 journalctl 里，我 grep 了所有跟 TEM/OCA Immediate Fill 相关的 log：
+
+journalctl -u tiger-trading --no-pager -n 200 \
+  | grep -E "OCA protection created for TEM|OCA creation failed for TEM|OCA creation error|Created trailing stop #. for TEM"结果是空的。
+也就是：
+
+• TS 创建时的那句 ✅ Created trailing stop #... for TEM 没有打出来；
+• OCA 创建时的那些 log（成功/失败/异常）也都没有出现。
+
+结合上面的条件判断，可以精准地说：
+
+在这次 TEM 下单时，你走到了 get_order_status == filled 这个分支，但在那下面的 ts_config.is_enabled / existing_ts / create_trailing_stop_for_trade 这一整块，没有按预期完整执行；TrailingStopPosition #3 可能是稍后由别的路径（比如手动设置保护、调度器 fallback、OCA rebuild 逻辑）创建的。───
+
+3. 调度器路径（轮询 fill → 建 TS + OCA）也有同样的前提
+
+在 trailing_stop_scheduler.py 里还有一段 fallback 创建 OCA 的逻辑，类似：
+
+if ts_config.is_enabled:
+    ...
+    if oca_result:
+        logger.info(f"✅ OCA protection created (fallback) for {trade.symbol}: {oca_status}")
+    else:
+        logger.warning(f"⚠️ OCA creation failed (fallback) for {trade.symbol}: {oca_status}")我同样在日志里搜了：
+
+journalctl -u tiger-trading --no-pager -n 500 \
+  | grep -E "OCA protection created .*TEM|OCA creation failed .*TEM|OCA creation error .*TEM"也是空的。
+这说明，调度器那条 fallback OCA 线路，对 TEM 这笔仓位也还没真正触发一次 create_oca_protection。
+
+───
+
+4. 精准定位：卡在什么条件上？
+
+综合代码 + 数据 + 日志，可以精准锁定到这几点：
+
+1. 即时 OCA 创建分支的入口是 tiger_status == 'filled' 之后的那段 routes.py 代码；
+2. 进入这段之前，你已经：
+  • 有 Trade（stop_loss_price / take_profit_price 均有值）
+  • 有 OrderTracker（FILLED）
+3. 但在这段里面：
+  • ts_config.is_enabled 必须为 True 才会创建 TS+OCA；
+  • 且 existing_ts 必须为 None（不能已有 active TS）；
+4. 目前从日志看：
+  • 没有 “Created trailing stop #… for TEM on immediate fill” 的日志
+→ 要么当时 ts_config.is_enabled 为 False，要么当时已有 active TS，被 if not existing_ts: 短路；
+  • 没有 “OCA protection created/failed for TEM on immediate fill” 的任何日志
+→ 说明 那一整块 if trailing_pos: 里的 OCA 调用根本没跑过。
+
+换句话说：
+
+对于 TEM 这笔“刚刚测试”的订单，当时即时填单那一条 “TS + OCA” 分支实际上没有被执行；
+之后你看到的 TrailingStopPosition #3，很可能是由 fallback/rebuild 或别的入口创建的，OCA 则尚未由任何路径触发。───
+

@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}Tiger Closed History - Trading System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-5 fw-bold">
+            <i class="fas fa-history me-3"></i>Tiger Closed History
+        </h1>
+        <p class="lead">View historical filled orders directly from Tiger API (Tiger API 历史成交记录)</p>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>{{ error }}
+</div>
+{% endif %}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('tiger_closed_history') }}" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Account Type</label>
+                        <select name="account_type" class="form-select">
+                            <option value="real" {% if account_type == 'real' %}selected{% endif %}>Real Account</option>
+                            <option value="paper" {% if account_type == 'paper' %}selected{% endif %}>Paper Account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date or '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Symbol</label>
+                        <input type="text" name="symbol" class="form-control" placeholder="e.g., TSLA" value="{{ symbol_filter or '' }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                        <a href="{{ url_for('tiger_closed_history') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-undo me-1"></i>Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total P&L</h6>
+                <h3 class="mb-0 {% if total_pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if total_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(total_pnl) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Total Commission</h6>
+                <h3 class="mb-0 text-warning">${{ "%.2f"|format(total_commission) }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Buy Orders</h6>
+                <h3 class="mb-0 text-info">{{ buy_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Sell Orders</h6>
+                <h3 class="mb-0 text-info">{{ sell_count }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Filled Orders ({{ total_orders }} total, showing {{ orders|length }})</h5>
+                <div>
+                    <span class="me-3 text-muted">Page {{ page }} of {{ total_pages }}</span>
+                    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Trade Time</th>
+                                    <th>Symbol</th>
+                                    <th>Action</th>
+                                    <th>Quantity</th>
+                                    <th>Avg Fill Price</th>
+                                    <th>Avg Cost</th>
+                                    <th>Realized P&L</th>
+                                    <th>Commission</th>
+                                    <th>Order Type</th>
+                                    <th>Order ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted" style="font-family: 'Roboto Mono', monospace;">
+                                            {{ order.trade_time_str }}
+                                        </small>
+                                    </td>
+                                    <td><strong>{{ order.symbol }}</strong></td>
+                                    <td>
+                                        {% if 'BUY' in order.action|upper %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-arrow-up me-1"></i>BUY
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-arrow-down me-1"></i>SELL
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">{{ order.filled }}</td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.avg_fill_price %}
+                                            ${{ "%.2f"|format(order.avg_fill_price) }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.avg_cost %}
+                                            ${{ "%.2f"|format(order.avg_cost) }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.realized_pnl != 0 %}
+                                            <span class="{% if order.realized_pnl >= 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                                {% if order.realized_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(order.realized_pnl) }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-family: 'Roboto Mono', monospace;">
+                                        {% if order.commission %}
+                                            <span class="text-warning">${{ "%.2f"|format(order.commission) }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ order.order_type }}</span>
+                                    </td>
+                                    <td>
+                                        <code style="font-size: 0.75rem;">{{ order.order_id }}</code>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if total_pages > 1 %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('tiger_closed_history', account_type=account_type, start_date=start_date, end_date=end_date, symbol=symbol_filter, page=1, per_page=per_page) }}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('tiger_closed_history', account_type=account_type, start_date=start_date, end_date=end_date, symbol=symbol_filter, page=page-1, per_page=per_page) }}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            
+                            {% set start_page = [1, page - 2]|max %}
+                            {% set end_page = [total_pages, page + 2]|min %}
+                            
+                            {% for p in range(start_page, end_page + 1) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('tiger_closed_history', account_type=account_type, start_date=start_date, end_date=end_date, symbol=symbol_filter, page=p, per_page=per_page) }}">{{ p }}</a>
+                            </li>
+                            {% endfor %}
+                            
+                            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('tiger_closed_history', account_type=account_type, start_date=start_date, end_date=end_date, symbol=symbol_filter, page=page+1, per_page=per_page) }}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('tiger_closed_history', account_type=account_type, start_date=start_date, end_date=end_date, symbol=symbol_filter, page=total_pages, per_page=per_page) }}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No filled orders found</h4>
+                        <p class="text-muted">
+                            Adjust your filter criteria or wait for trades to be completed.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if orders %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card {% if total_pnl >= 0 %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-body text-center">
+                <h5 class="card-title">Net Profit/Loss (After Commission)</h5>
+                <h2 class="{% if (total_pnl - total_commission) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% set net_pnl = total_pnl - total_commission %}
+                    {% if net_pnl >= 0 %}+{% endif %}${{ "%.2f"|format(net_pnl) }}
+                </h2>
+                <p class="text-muted mb-0">
+                    Gross P&L: ${{ "%.2f"|format(total_pnl) }} | Commission: ${{ "%.2f"|format(total_commission) }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Tiger Closed History page initialized');
+});
+</script>
+{% endblock %}

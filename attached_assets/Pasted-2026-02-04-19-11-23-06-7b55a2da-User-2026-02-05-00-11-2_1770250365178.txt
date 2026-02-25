@@ -1,0 +1,112 @@
+2026-02-04 19:11:23.06
+7b55a2da
+User
+[2026-02-05 00:11:23 +0000] [28] [CRITICAL] WORKER TIMEOUT (pid:44)
+2026-02-04 19:11:23.07
+7b55a2da
+User
+DEBUG:getmac:Could not find file: '/sys/class/net/ipvlan-eth0/address'
+2026-02-04 19:11:23.07
+7b55a2da
+User
+DEBUG:getmac:Raw MAC found: 00:00:00:00:00:00
+2026-02-04 19:11:23.09
+7b55a2da
+User
+DEBUG:urllib3.connectionpool:Resetting dropped connection: cg.play-analytics.com
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+[2026-02-05 00:11:23 +0000] [44] [ERROR] Error handling request /trade-analytics
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+2026-02-04 19:11:23.12
+7b55a2da
+User
+return self.wsgi_app(environ, start_response)
+2026-02-04 19:11:23.12
+7b55a2da
+User
+response = self.full_dispatch_request()
+2026-02-04 19:11:23.12
+7b55a2da
+User
+Traceback (most recent call last):
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+2026-02-04 19:11:23.12
+7b55a2da
+User
+respiter = self.wsgi(environ, resp.start_response)
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/middleware/proxy_fix.py", line 183, in __call__
+2026-02-04 19:11:23.12
+7b55a2da
+User
+return self.app(environ, start_response)
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/loading.py", line 695, in load_on_pk_identity
+2026-02-04 19:11:23.12
+7b55a2da
+User
+return fn(*args, **kwargs) # type: ignore[no-any-return]
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+self.handle_request(listener, req, client, addr)
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+^^^^^^^^^^^^^
+2026-02-04 19:11:23.12
+7b55a2da
+User
+File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+2026-02-04 19:11:23.12
+7b55a2da
+User
+rv = self.dispatch_request()
+2026-02-04 19:11:23.12
+7b55a2da
+User
+return self._execute_internal(

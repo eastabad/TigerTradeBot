@@ -1,0 +1,26 @@
+# Tiger Open API Configuration
+# 复制本文件到项目根目录并重命名：
+#   cp deploy/tiger_openapi_config.properties.example tiger_openapi_config.properties
+#
+# 从 Tiger Trade 开发者后台获取密钥: https://developer.itigerup.com
+
+# PKCS#1 格式私钥 (可选)
+private_key_pk1=YOUR_PRIVATE_KEY_PK1_HERE
+
+# PKCS#8 格式私钥 (必填 - 系统使用此格式)
+private_key_pk8=YOUR_PRIVATE_KEY_PK8_HERE
+
+# Tiger 开发者 ID
+tiger_id=YOUR_TIGER_ID
+
+# 真实交易账户号 (例如: 50904193)
+account=YOUR_REAL_ACCOUNT_ID
+
+# 牌照类型: TBSG (新加坡) 或 TBUS (美国)
+license=TBSG
+
+# 环境: PROD (生产) 或 SANDBOX (沙箱测试)
+env=PROD
+
+# 设备标识符 (任意唯一字符串，用于 WebSocket 连接)
+device_id=my-trading-vps

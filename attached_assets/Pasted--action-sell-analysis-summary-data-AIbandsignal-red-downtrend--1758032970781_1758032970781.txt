@@ -1,0 +1,64 @@
+{
+  "action": "sell",
+  "analysis_summary": "",
+  "data": {
+    "AIbandsignal": "red downtrend",
+    "BBPsignal": "bullpower ",
+    "CVDsignal": "cvdBelowMA",
+    "Current_timeframe": "15",
+    "ETFQTY": "500",
+    "HTFwave_signal": "Bearish",
+    "MAtrend": "-1",
+    "MAtrend_timeframe1": "1",
+    "MAtrend_timeframe2": "1",
+    "MOMOsignal": "bearishmomo",
+    "Middle_smooth_trend": "Bullish ",
+    "POCtrend": "2",
+    "RSIHAsignal": "BearishHA",
+    "SQZsignal": "no squeeze",
+    "TrendTracerHTF": "-1",
+    "TrendTracersignal": "-1",
+    "adaptive_timeframe_1": "60",
+    "adaptive_timeframe_2": "240",
+    "adxValue": "42.5809090564",
+    "center_trend": "Weak Bullish",
+    "choppiness": "28.0141402775",
+    "choppingrange_signal": "no chopping",
+    "ewotrend_state": "Strong Bearish",
+    "lastDemandText": "239.67 - 238.54 | 1H",
+    "lastSupplyText": "242.56 - 241.35 | 1H",
+    "obData": "Timeframe: 60; Bullish OB: 241.95 - 238.54; Bearish OB: 215.33 - 213.05",
+    "pmaText": "PMA Strong Bearish",
+    "poc_summary": "Daily POC: 251.00; Prev DailyPOC: 249.00; Weekly POC: 249.00; Prev Weekly POC: 240.00; Monthly POC: 230.00; Prev Monthly POC: 204.00",
+    "ratingstatus": "Bearish-Medium-OscDriven",
+    "rsi_state_trend": "Bullish",
+    "symbol": "GOOG",
+    "trend_change_volatility_stop": "255.16",
+    "wavemarket_state": "Short Weak"
+  },
+  "extras": {
+    "etf": {
+      "entryPrice": 8.67,
+      "stopLoss": 8.53,
+      "takeProfit": 8.88,
+      "ticker": "GGLS"
+    },
+    "indicator": "N/A",
+    "oscrating": 75,
+    "referencePrice": 250.15,
+    "risk": 1,
+    "timeframe": "15m",
+    "trendrating": 70
+  },
+  "poc_summary": "Daily POC: 251.00; Prev DailyPOC: 249.00; Weekly POC: 249.00; Prev Weekly POC: 240.00; Monthly POC: 230.00; Prev Monthly POC: 204.00",
+  "poc_trend": 2,
+  "poc_trend_description": "\u5f3a\u52bf\u591a\u5934\u8d8b\u52bf\uff1a\u4ef7\u683c\u7ad9\u4e0a\u6240\u6709\u5468\u671f\u7684 POC\uff0c\u77ed\u4e2d\u957f\u671f\u5171\u632f\uff0c\u591a\u5934\u4e3b\u5bfc",
+  "quantity": 20,
+  "stopLoss": {
+    "stopPrice": 252.21
+  },
+  "takeProfit": {
+    "limitPrice": 247.05
+  },
+  "ticker": "GOOG"
+}

@@ -1,0 +1,165 @@
+{% extends "alpaca/base.html" %}
+
+{% block title %}Alpaca Account{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="fas fa-wallet me-2"></i>Account & Holdings</h4>
+    <form method="post" action="{{ url_for('alpaca.alpaca_sync_holdings') }}" class="d-inline">
+        <button type="submit" class="btn btn-sm btn-outline-warning">
+            <i class="fas fa-sync-alt me-1"></i>Sync Holdings
+        </button>
+    </form>
+</div>
+
+{% if error_msg %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle me-2"></i>{{ error_msg }}
+</div>
+{% endif %}
+
+{% if account_info %}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card neutral">
+            <div class="card-body">
+                <div class="text-muted small">Account Status</div>
+                <div class="fs-5 fw-bold">
+                    <span class="badge bg-success">{{ account_info.get('status', 'N/A') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="text-muted small">Portfolio Value</div>
+                <div class="fs-4 fw-bold monospace">${{ "%.2f"|format(account_info.get('portfolio_value', 0)|float) }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card profit">
+            <div class="card-body">
+                <div class="text-muted small">Cash / Buying Power</div>
+                <div class="fw-bold monospace">${{ "%.2f"|format(account_info.get('cash', 0)|float) }}</div>
+                <div class="text-muted small monospace">${{ "%.2f"|format(account_info.get('buying_power', 0)|float) }} BP</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card info">
+            <div class="card-body">
+                <div class="text-muted small">Equity</div>
+                <div class="fw-bold monospace">${{ "%.2f"|format(account_info.get('equity', 0)|float) }}</div>
+                <div class="text-muted small monospace">
+                    Last: ${{ "%.2f"|format(account_info.get('last_equity', 0)|float) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Account Details</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted">Account ID</td><td class="monospace">{{ account_info.get('account_number', 'N/A') }}</td></tr>
+                    <tr><td class="text-muted">Pattern Day Trader</td><td>{{ 'Yes' if account_info.get('pattern_day_trader') else 'No' }}</td></tr>
+                    <tr><td class="text-muted">Day Trade Count</td><td class="monospace">{{ account_info.get('daytrade_count', 0) }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-4">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted">Long Value</td><td class="monospace">${{ "%.2f"|format(account_info.get('long_market_value', 0)|float) }}</td></tr>
+                    <tr><td class="text-muted">Short Value</td><td class="monospace">${{ "%.2f"|format(account_info.get('short_market_value', 0)|float) }}</td></tr>
+                    <tr><td class="text-muted">Open Orders</td><td class="monospace">{{ account_info.get('pending_transfer_out', 0) }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-4">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted">Currency</td><td>{{ account_info.get('currency', 'USD') }}</td></tr>
+                    <tr><td class="text-muted">Multiplier</td><td class="monospace">{{ account_info.get('multiplier', 'N/A') }}</td></tr>
+                    <tr><td class="text-muted">Created</td><td class="monospace small">{{ account_info.get('created_at', 'N/A')[:10] }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% elif not error_msg %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    API keys not configured. Go to <a href="{{ url_for('alpaca.alpaca_settings') }}">Settings</a> to set up your Alpaca API keys.
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-briefcase me-2"></i>Current Holdings</h6>
+        <span class="text-muted small">
+            {% if sync_status.last_sync %}
+                Last sync: {{ sync_status.last_sync.strftime('%Y-%m-%d %H:%M:%S') }}
+            {% else %}
+                Not synced yet
+            {% endif %}
+            {% if sync_status.error %}
+                <span class="text-danger ms-2">Error: {{ sync_status.error }}</span>
+            {% endif %}
+        </span>
+    </div>
+    <div class="card-body p-0">
+        {% if holdings %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Side</th>
+                        <th>Qty</th>
+                        <th>Avg Cost</th>
+                        <th>Current Price</th>
+                        <th>Market Value</th>
+                        <th>Unrealized P&L</th>
+                        <th>Change Today</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in holdings %}
+                    <tr>
+                        <td class="fw-bold">{{ h.symbol }}</td>
+                        <td>
+                            <span class="badge {% if h.side == 'long' %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ (h.side or 'long')|upper }}
+                            </span>
+                        </td>
+                        <td class="monospace">{{ h.quantity }}</td>
+                        <td class="monospace">${{ "%.2f"|format(h.average_cost or 0) }}</td>
+                        <td class="monospace">${{ "%.2f"|format(h.current_price or 0) }}</td>
+                        <td class="monospace">${{ "%.2f"|format(h.market_value or 0) }}</td>
+                        <td class="monospace {% if (h.unrealized_pnl or 0) >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                            ${{ "%.2f"|format(h.unrealized_pnl or 0) }}
+                            {% if h.unrealized_pnl_pct is not none %}
+                                <small>({{ "%.2f"|format(h.unrealized_pnl_pct) }}%)</small>
+                            {% endif %}
+                        </td>
+                        <td class="monospace {% if (h.change_today or 0) >= 0 %}text-profit{% else %}text-loss{% endif %}">
+                            {{ "%.2f"|format(h.change_today or 0) }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <p>No holdings. Click "Sync Holdings" to fetch positions from Alpaca.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Trailing Stop Configuration{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">
+        <i class="fas fa-cog me-2"></i>
+        移动止损参数配置
+    </h1>
+    <a href="{{ url_for('trailing_stop') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>返回
+    </a>
+</div>
+
+<form method="POST" action="{{ url_for('trailing_stop_config') }}">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i>ATR 设置
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">ATR 周期</label>
+                        <input type="number" name="atr_period" class="form-control" 
+                               value="{{ config.atr_period }}" min="5" max="50">
+                        <small class="text-muted">日内交易建议14，日线交易建议21</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-layer-group me-2"></i>浮盈阶段阈值
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">STATE_0 阈值 (小数)</label>
+                        <input type="number" name="tier_0_threshold" class="form-control" 
+                               value="{{ config.tier_0_threshold }}" step="0.001" min="0" max="1">
+                        <small class="text-muted">浮盈低于此值为STATE_0，如0.01表示1%</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">STATE_1 阈值 (小数)</label>
+                        <input type="number" name="tier_1_threshold" class="form-control" 
+                               value="{{ config.tier_1_threshold }}" step="0.001" min="0" max="1">
+                        <small class="text-muted">浮盈低于此值为STATE_1，如0.03表示3%</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-times me-2"></i>ATR 倍数 (各阶段)
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">STATE_0 倍数 (低浮盈)</label>
+                        <input type="number" name="tier_0_multiplier" class="form-control" 
+                               value="{{ config.tier_0_multiplier }}" step="0.1" min="0.5" max="5">
+                        <small class="text-muted">浮盈低时用较大倍数，防止被震出</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">STATE_1 倍数 (中浮盈)</label>
+                        <input type="number" name="tier_1_multiplier" class="form-control" 
+                               value="{{ config.tier_1_multiplier }}" step="0.1" min="0.5" max="5">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">STATE_2 倍数 (高浮盈)</label>
+                        <input type="number" name="tier_2_multiplier" class="form-control" 
+                               value="{{ config.tier_2_multiplier }}" step="0.1" min="0.5" max="5">
+                        <small class="text-muted">高浮盈时用较小倍数，锁定利润</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-bolt me-2"></i>波动率调节因子
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">根据市场波动率(ATR/收盘价)调整ATR倍数，波动大时放宽、波动小时收紧</p>
+                    <div class="mb-3">
+                        <label class="form-label">低波动阈值</label>
+                        <input type="number" name="low_volatility_threshold" class="form-control" 
+                               value="{{ config.low_volatility_threshold }}" step="0.001" min="0" max="0.1">
+                        <small class="text-muted">低于 {{ "%.1f"|format((config.low_volatility_threshold or 0.008) * 100) }}% 视为低波动，乘以收紧因子</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">高波动阈值</label>
+                        <input type="number" name="high_volatility_threshold" class="form-control" 
+                               value="{{ config.high_volatility_threshold }}" step="0.001" min="0" max="0.1">
+                        <small class="text-muted">高于 {{ "%.1f"|format((config.high_volatility_threshold or 0.015) * 100) }}% 视为高波动，乘以放宽因子</small>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-4">
+                            <label class="form-label">低波动因子</label>
+                            <input type="number" name="low_volatility_factor" class="form-control" 
+                                   value="{{ config.low_volatility_factor }}" step="0.1" min="0.1" max="2">
+                            <small class="text-muted">收紧止损</small>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">中波动因子</label>
+                            <input type="number" name="mid_volatility_factor" class="form-control" 
+                                   value="{{ config.mid_volatility_factor }}" step="0.1" min="0.1" max="2">
+                            <small class="text-muted">标准止损</small>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">高波动因子</label>
+                            <input type="number" name="high_volatility_factor" class="form-control" 
+                                   value="{{ config.high_volatility_factor }}" step="0.1" min="0.1" max="2">
+                            <small class="text-muted">放宽止损</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-percentage me-2"></i>动态百分比止损
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info small mb-3">
+                        <strong>工作原理:</strong> 浮盈越高，允许的回撤比例越大。系统采用分段线性公式：
+                        <ul class="mb-0 mt-2">
+                            <li><strong>第一区间</strong>: 浮盈 0% ~ 第一阈值 → 回撤从 0% 增长到 第一回撤%</li>
+                            <li><strong>第二区间</strong>: 浮盈 第一阈值 ~ 第二阈值 → 回撤从 第一回撤% 增长到 第二回撤%</li>
+                            <li><strong>第三区间</strong>: 浮盈 > 第二阈值 → 回撤从 第二回撤% 增长到 最大回撤%</li>
+                        </ul>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">第一区间上限 (浮盈%)</label>
+                            <div class="input-group">
+                                <input type="number" name="dynamic_pct_tier1_upper" class="form-control" 
+                                       value="{{ config.dynamic_pct_tier1_upper or 0.02 }}" step="0.005" min="0.005" max="0.1">
+                                <span class="input-group-text">= {{ "%.1f"|format((config.dynamic_pct_tier1_upper or 0.02) * 100) }}%</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">第一区间回撤</label>
+                            <div class="input-group">
+                                <input type="number" name="dynamic_pct_tier1_percent" class="form-control" 
+                                       value="{{ config.dynamic_pct_tier1_percent or 0.002 }}" step="0.001" min="0.001" max="0.05">
+                                <span class="input-group-text">= {{ "%.1f"|format((config.dynamic_pct_tier1_percent or 0.002) * 100) }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">第二区间上限 (浮盈%)</label>
+                            <div class="input-group">
+                                <input type="number" name="dynamic_pct_tier2_upper" class="form-control" 
+                                       value="{{ config.dynamic_pct_tier2_upper or 0.05 }}" step="0.01" min="0.01" max="0.2">
+                                <span class="input-group-text">= {{ "%.1f"|format((config.dynamic_pct_tier2_upper or 0.05) * 100) }}%</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">第二区间回撤</label>
+                            <div class="input-group">
+                                <input type="number" name="dynamic_pct_tier2_percent" class="form-control" 
+                                       value="{{ config.dynamic_pct_tier2_percent or 0.005 }}" step="0.001" min="0.001" max="0.05">
+                                <span class="input-group-text">= {{ "%.1f"|format((config.dynamic_pct_tier2_percent or 0.005) * 100) }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">最大回撤上限</label>
+                        <div class="input-group">
+                            <input type="number" name="max_percent_stop" class="form-control" 
+                                   value="{{ config.max_percent_stop or 0.008 }}" step="0.001" min="0.001" max="0.1">
+                            <span class="input-group-text">= {{ "%.1f"|format((config.max_percent_stop or 0.008) * 100) }}%</span>
+                        </div>
+                        <small class="text-muted">无论浮盈多高，回撤比例不超过此值</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-exchange-alt me-2"></i>止盈切换设置
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">普通切换比例 (小数)</label>
+                        <input type="number" name="switch_profit_ratio" class="form-control" 
+                               value="{{ config.switch_profit_ratio }}" step="0.01" min="0.5" max="1">
+                        <small class="text-muted">普通趋势时，完成多少计划盈利时切换，如0.90表示90%</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">强势切换比例 (小数)</label>
+                        <input type="number" name="switch_profit_ratio_strong" class="form-control" 
+                               value="{{ config.switch_profit_ratio_strong or 0.95 }}" step="0.01" min="0.5" max="1">
+                        <small class="text-muted">强势趋势时延迟切换，如0.95表示95%</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">切换后ATR倍数</label>
+                        <input type="number" name="post_switch_multiplier" class="form-control" 
+                               value="{{ config.post_switch_multiplier }}" step="0.1" min="0.5" max="3">
+                        <small class="text-muted">切换后使用更紧的ATR倍数</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">切换后回撤比例 (小数)</label>
+                        <input type="number" name="post_switch_trail_pct" class="form-control" 
+                               value="{{ config.post_switch_trail_pct }}" step="0.01" min="0.01" max="0.5">
+                        <small class="text-muted">切换后最高价回撤触发，如0.05表示5%</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-fire me-2"></i>趋势强度设置
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">强势阈值 (0-100)</label>
+                        <input type="number" name="trend_strength_threshold" class="form-control" 
+                               value="{{ config.trend_strength_threshold or 60 }}" step="5" min="0" max="100">
+                        <small class="text-muted">趋势强度≥此值视为强势趋势，延迟切换</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">动量回看K线数</label>
+                        <input type="number" name="momentum_lookback" class="form-control" 
+                               value="{{ config.momentum_lookback or 5 }}" min="2" max="20">
+                        <small class="text-muted">计算动量时回看的K线数量</small>
+                    </div>
+                    <hr>
+                    <p class="text-muted small">趋势强度权重（三者之和应为1.0）</p>
+                    <div class="row">
+                        <div class="col-4">
+                            <label class="form-label">ATR收敛</label>
+                            <input type="number" name="atr_convergence_weight" class="form-control" 
+                                   value="{{ config.atr_convergence_weight or 0.3 }}" step="0.1" min="0" max="1">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">动量</label>
+                            <input type="number" name="momentum_weight" class="form-control" 
+                                   value="{{ config.momentum_weight or 0.4 }}" step="0.1" min="0" max="1">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">连续创新高</label>
+                            <input type="number" name="consecutive_weight" class="form-control" 
+                                   value="{{ config.consecutive_weight or 0.3 }}" step="0.1" min="0" max="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-stairs me-2"></i>阶梯止损上移设置
+                </div>
+                <div class="card-body">
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="progressive_stop_enabled" class="form-check-input" id="progressive_stop_enabled"
+                               {% if config.progressive_stop_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="progressive_stop_enabled">启用阶梯止损上移</label>
+                        <small class="text-muted d-block">随盈利增加自动上移止损价格</small>
+                    </div>
+                    <hr>
+                    <p class="text-muted small mb-2">每个阶梯: 当盈利达到X% → 止损上移到Y%位置</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>阶梯</th>
+                                    <th>盈利触发点</th>
+                                    <th>止损移至</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Tier 1</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier1_profit" class="form-control" 
+                                                   value="{{ config.prog_tier1_profit or 0.01 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier1_profit or 0.01) * 100) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier1_stop_at" class="form-control" 
+                                                   value="{{ config.prog_tier1_stop_at or 0.0 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier1_stop_at or 0.0) * 100) }}% (保本)</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Tier 2</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier2_profit" class="form-control" 
+                                                   value="{{ config.prog_tier2_profit or 0.03 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier2_profit or 0.03) * 100) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier2_stop_at" class="form-control" 
+                                                   value="{{ config.prog_tier2_stop_at or 0.01 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier2_stop_at or 0.01) * 100) }}%利润</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Tier 3</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier3_profit" class="form-control" 
+                                                   value="{{ config.prog_tier3_profit or 0.05 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier3_profit or 0.05) * 100) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier3_stop_at" class="form-control" 
+                                                   value="{{ config.prog_tier3_stop_at or 0.03 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier3_stop_at or 0.03) * 100) }}%利润</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Tier 4</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier4_profit" class="form-control" 
+                                                   value="{{ config.prog_tier4_profit or 0.08 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier4_profit or 0.08) * 100) }}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="prog_tier4_stop_at" class="form-control" 
+                                                   value="{{ config.prog_tier4_stop_at or 0.05 }}" step="0.005" min="0" max="0.5">
+                                            <span class="input-group-text">{{ "%.0f"|format((config.prog_tier4_stop_at or 0.05) * 100) }}%利润</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">例: 盈利1%时止损移到入场价(保本)，盈利3%时止损移到1%利润位</small>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-clock me-2"></i>系统设置
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">检查间隔 (秒)</label>
+                        <input type="number" name="check_interval_seconds" class="form-control" 
+                               value="{{ config.check_interval_seconds }}" min="10" max="300">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">最大Percent Stop (小数)</label>
+                        <input type="number" name="max_percent_stop" class="form-control" 
+                               value="{{ config.max_percent_stop }}" step="0.1" min="0.1" max="1">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="is_enabled" class="form-check-input" id="is_enabled"
+                               {% if config.is_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="is_enabled">启用移动止损系统</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-end gap-2">
+        <a href="{{ url_for('trailing_stop') }}" class="btn btn-secondary">取消</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>保存配置
+        </button>
+    </div>
+</form>
+{% endblock %}

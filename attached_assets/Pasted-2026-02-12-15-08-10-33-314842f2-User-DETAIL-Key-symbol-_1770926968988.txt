@@ -1,0 +1,84 @@
+2026-02-12 15:08:10.33
+314842f2
+User
+DETAIL: Key (symbol, timeframe, "timestamp")=(TXN, 5min, 2026-02-12 14:55:00) already exists.
+2026-02-12 15:08:10.33
+314842f2
+User
+[SQL: INSERT INTO bar_cache (symbol, timeframe, timestamp, open, high, low, close, volume) VALUES (%(symbol)s, %(timeframe)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s) RETURNING bar_cache.id]
+2026-02-12 15:08:10.33
+314842f2
+User
+[SQL: INSERT INTO bar_cache (symbol, timeframe, timestamp, open, high, low, close, volume) VALUES (%(symbol)s, %(timeframe)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s) RETURNING bar_cache.id]
+2026-02-12 15:08:10.33
+314842f2
+User
+[parameters: {'symbol': 'TXN', 'timeframe': '5min', 'timestamp': datetime.datetime(2026, 2, 12, 14, 55), 'open': 227.5356, 'high': 227.96, 'low': 227.04, 'close': 227.37, 'volume': 61139}]
+2026-02-12 15:08:10.33
+314842f2
+User
+(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "uq_bar_cache_symbol_tf_ts"
+2026-02-12 15:08:10.33
+314842f2
+User
+ERROR:kline_service:Error fetching bars for GRAL/15min: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+2026-02-12 15:08:10.33
+314842f2
+User
+(Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2026-02-12 15:08:10.33
+314842f2
+User
+[SQL: INSERT INTO bar_cache (symbol, timeframe, timestamp, open, high, low, close, volume) VALUES (%(symbol)s, %(timeframe)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s) RETURNING bar_cache.id]
+2026-02-12 15:08:10.33
+314842f2
+User
+(Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2026-02-12 15:08:10.33
+314842f2
+User
+DEBUG:kline_service:[KlineService] Startup GRAL/15min: BACKFILL: Error fetching bars for GRAL/15min: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+2026-02-12 15:08:10.33
+314842f2
+User
+ERROR:kline_service:Error fetching bars for GRAL/15min: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+2026-02-12 15:08:10.33
+314842f2
+User
+(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "uq_bar_cache_symbol_tf_ts"
+2026-02-12 15:08:10.33
+314842f2
+User
+[parameters: {'symbol': 'TXN', 'timeframe': '5min', 'timestamp': datetime.datetime(2026, 2, 12, 14, 55), 'open': 227.5356, 'high': 227.96, 'low': 227.04, 'close': 227.37, 'volume': 61139}]
+2026-02-12 15:08:10.33
+314842f2
+User
+DETAIL: Key (symbol, timeframe, "timestamp")=(TXN, 5min, 2026-02-12 14:55:00) already exists.
+2026-02-12 15:08:11.02
+7128791c
+User
+DEBUG:tiger_push_client:📊 Quote update: LLY price=1052.95 session=regular
+2026-02-12 15:08:11.03
+314842f2
+User
+[SQL: INSERT INTO bar_cache (symbol, timeframe, timestamp, open, high, low, close, volume) VALUES (%(symbol)s, %(timeframe)s, %(timestamp)s, %(open)s, %(high)s, %(low)s, %(close)s, %(volume)s) RETURNING bar_cache.id]
+2026-02-12 15:08:11.03
+314842f2
+User
+(Background on this error at: https://sqlalche.me/e/20/gkpj) (Background on this error at: https://sqlalche.me/e/20/7s2a)
+2026-02-12 15:08:11.03
+314842f2
+User
+ERROR:kline_service:Error getting last cached bar time for AMDG/15min: This Session's transaction has been rolled back due to a previous exception during flush. To begin a new transaction with this Session, first issue Session.rollback(). Original exception was: (raised as a result of Query-invoked autoflush; consider using a session.no_autoflush block if this flush is occurring prematurely)
+2026-02-12 15:08:11.03
+314842f2
+User
+[parameters: {'symbol': 'TXN', 'timeframe': '5min', 'timestamp': datetime.datetime(2026, 2, 12, 14, 55), 'open': 227.5356, 'high': 227.96, 'low': 227.04, 'close': 227.37, 'volume': 61139}]
+2026-02-12 15:08:11.03
+314842f2
+User
+DETAIL: Key (symbol, timeframe, "timestamp")=(TXN, 5min, 2026-02-12 14:55:00) already exists.
+2026-02-12 15:08:11.03
+314842f2
+User
+(psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "uq_bar_cache_symbol_tf_ts"
